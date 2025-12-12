@@ -98,7 +98,7 @@ impl EditRequestAndArgsBuilder {
             if let Some(where_idx) = self.where_idx
                 && where_idx == idx + 1
             {
-                where_clause = Some(format!("WHERE {} = ${}\n", name, idx + 1));
+                where_clause = Some(format!("WHERE {} = ${}", name, idx + 1));
             } else {
                 rq.push_str(&format!(
                     "{}{} = ${}",

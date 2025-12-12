@@ -62,8 +62,7 @@ RETURNING
 
     pub async fn edit_slot(&self, slot_id: i32, updates: PartialSlot) -> Result<Slot, RepoError> {
         let rq_head = "UPDATE slot SET\n";
-        let rq_tail = r#"
-RETURNING
+        let rq_tail = r#"RETURNING
     slot_id,
     slot_starts_at,
     slot_ends_at,
@@ -78,7 +77,7 @@ RETURNING
                 context: "edit_waiting_list",
             });
         }
-        let rq = format!("{rq_head}{}{rq_tail}", generator.build_rq_str());
+        let rq = format!("{rq_head}\n{}\n{rq_tail}", generator.build_rq_str());
         debug!("edit request built: {}", rq);
         let query = sqlx::query_as_with(&rq, generator.args);
         Ok(query

@@ -113,9 +113,8 @@ RETURNING
         criteria: WaitingTokenCriteria,
         updates: EditWaitingToken,
     ) -> Result<WaitingToken, RepoError> {
-        let rq_head = "UPDATE waiting_token SET\n";
-        let rq_tail = r#"
-RETURNING
+        let rq_head = "UPDATE waiting_token SET";
+        let rq_tail = r#"RETURNING
     wtoken_id,
     wtoken_secret,
     wtoken_client_name,
@@ -133,7 +132,8 @@ RETURNING
             WaitingTokenCriteria::Id(id) => generator.add_where("wtoken_id", id)?,
             WaitingTokenCriteria::Secret(secret) => generator.add_where("wtoken_secret", secret)?,
         }
-        let rq = format!("{rq_head}{}{rq_tail}", generator.build_rq_str());
+        let rq = format!("{rq_head}\n{}\n{rq_tail}", generator.build_rq_str());
+        debug!("edit request built: {}", rq);
         Ok(sqlx::query_as_with(&rq, generator.args)
             .fetch_one(&self.pool)
             .await

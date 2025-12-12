@@ -85,15 +85,13 @@ RETURNING wlist_id, wlist_name, wlist_secret, wlist_opens_at, wlist_closes_at"#,
         admin_token: &str,
         updates: PartialWaitingList,
     ) -> Result<WaitingList, RepoError> {
-        let rq_head = "UPDATE waiting_list SET\n";
-        let rq_tail = r#"
-RETURNING
+        let rq_head = "UPDATE waiting_list SET";
+        let rq_tail = r#"RETURNING
     wlist_id,
     wlist_name,
     wlist_secret,
     wlist_opens_at,
-    wlist_closes_at
-            "#;
+    wlist_closes_at"#;
         let mut generator = super::EditRequestAndArgsBuilder::new();
         generator.add_if_some("wlist_name", updates.wlist_name)?;
         generator.add_if_some("wlist_opens_at", updates.wlist_opens_at)?;
@@ -104,7 +102,7 @@ RETURNING
                 context: "edit_waiting_list",
             });
         }
-        let rq = format!("{rq_head}{}{rq_tail}", generator.build_rq_str());
+        let rq = format!("{rq_head}\n{}\n{rq_tail}\n", generator.build_rq_str());
         debug!("edit request built: {}", rq);
         let query = sqlx::query_as_with(&rq, generator.args);
         Ok(query
