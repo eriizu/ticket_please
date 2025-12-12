@@ -18,8 +18,11 @@ enum HandlerError {
     Conflict { context: &'static str },
     #[error("{context}: user request is incoherent with database state")]
     Discrepancy { context: &'static str },
-    #[error("bad request")]
-    BadRequest,
+    #[error("{why}")]
+    BadRequest {
+        why: &'static str,
+        context: &'static str,
+    },
     #[error(
         "{context}: unspecified error, if you belive there is something wrong with the server, contact support"
     )]
@@ -34,7 +37,7 @@ impl poem::error::ResponseError for HandlerError {
             Self::NotFound { context: _ } => StatusCode::NOT_FOUND,
             Self::Conflict { context: _ } => StatusCode::CONFLICT,
             Self::Discrepancy { context: _ } => StatusCode::CONFLICT,
-            Self::BadRequest => StatusCode::BAD_REQUEST,
+            Self::BadRequest { why: _, context: _ } => StatusCode::BAD_REQUEST,
             Self::Unknown { context: _ } => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
@@ -54,8 +57,14 @@ impl std::convert::From<crate::db::RepoError> for HandlerError {
         use crate::db::RepoError;
         match value {
             RepoError::NotFound { context } => Self::NotFound { context },
-            RepoError::EmptyUpdates { context: _ } => Self::BadRequest,
-            RepoError::ArgumentEncode(_, _) => Self::BadRequest,
+            RepoError::EmptyUpdates { context } => Self::BadRequest {
+                why: "empty updates",
+                context,
+            },
+            RepoError::ArgumentEncode(name, _) => Self::BadRequest {
+                why: "cannot convert argument to SQL",
+                context: name,
+            },
             RepoError::Sqlx { error, context } => match error {
                 sqlx::Error::RowNotFound => Self::NotFound { context },
                 sqlx::Error::Database(error)

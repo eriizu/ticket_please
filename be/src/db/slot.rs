@@ -60,62 +60,27 @@ RETURNING
         Ok(slot)
     }
 
-    pub async fn edit_slot(
-        &self,
-        admin_token: &str,
-        updates: PartialSlot,
-    ) -> Result<Slot, RepoError> {
+    pub async fn edit_slot(&self, slot_id: i32, updates: PartialSlot) -> Result<Slot, RepoError> {
         let rq_head = "UPDATE slot SET\n";
         let rq_tail = r#"
-WHERE slot_id = $1
 RETURNING
     slot_id,
     slot_starts_at,
     slot_ends_at,
     wlist_id"#;
-        let mut rq = rq_head.to_owned();
-        let start_bind_idx = 2;
-        let mut bind_idx = start_bind_idx;
-        if updates.slot_starts_at.is_some() {
-            rq.push_str(&format!(
-                "{}slot_starts_at = ${}",
-                if bind_idx != 2 { ",\n" } else { "" },
-                bind_idx
-            ));
-            bind_idx += 1;
-        }
-        if updates.slot_ends_at.is_some() {
-            rq.push_str(&format!(
-                "{}slot_ends_at = ${}",
-                if bind_idx != 2 { ",\n" } else { "" },
-                bind_idx
-            ));
-            bind_idx += 1;
-        }
-        if updates.wlist_id.is_some() {
-            rq.push_str(&format!(
-                "{}wlist_id = ${}",
-                if bind_idx != 2 { ",\n" } else { "" },
-                bind_idx
-            ));
-        }
-        if start_bind_idx == bind_idx {
+        let mut generator = super::EditRequestAndArgsBuilder::new();
+        generator.add_if_some("wlist_name", updates.slot_starts_at)?;
+        generator.add_if_some("wlist_opens_at", updates.slot_ends_at)?;
+        generator.add_if_some("wlist_closes_at", updates.wlist_id)?;
+        generator.add_where("slot_id", slot_id)?;
+        if generator.bind_idx <= 2 {
             return Err(RepoError::EmptyUpdates {
-                context: "edit_slot",
+                context: "edit_waiting_list",
             });
         }
-        rq.push_str(rq_tail);
+        let rq = format!("{rq_head}{}{rq_tail}", generator.build_rq_str());
         debug!("edit request built: {}", rq);
-        let mut query = sqlx::query_as(&rq).bind(admin_token);
-        if let Some(value) = updates.slot_starts_at {
-            query = query.bind(value)
-        }
-        if let Some(value) = updates.slot_ends_at {
-            query = query.bind(value)
-        }
-        if let Some(value) = updates.wlist_id {
-            query = query.bind(value)
-        }
+        let query = sqlx::query_as_with(&rq, generator.args);
         Ok(query
             .fetch_one(&self.pool)
             .await

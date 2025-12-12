@@ -87,7 +87,6 @@ RETURNING wlist_id, wlist_name, wlist_secret, wlist_opens_at, wlist_closes_at"#,
     ) -> Result<WaitingList, RepoError> {
         let rq_head = "UPDATE waiting_list SET\n";
         let rq_tail = r#"
-WHERE wlist_secret = $1
 RETURNING
     wlist_id,
     wlist_name,
@@ -95,49 +94,19 @@ RETURNING
     wlist_opens_at,
     wlist_closes_at
             "#;
-        let mut rq = rq_head.to_owned();
-        let start_bind_idx = 2;
-        let mut bind_idx = start_bind_idx;
-        if updates.wlist_name.is_some() {
-            rq.push_str(&format!(
-                "{}wlist_name = ${}",
-                if bind_idx != 2 { ",\n" } else { "" },
-                bind_idx
-            ));
-            bind_idx += 1;
-        }
-        if updates.wlist_closes_at.is_some() {
-            rq.push_str(&format!(
-                "{}wlist_closes_at = ${}",
-                if bind_idx != 2 { ",\n" } else { "" },
-                bind_idx
-            ));
-            bind_idx += 1;
-        }
-        if updates.wlist_opens_at.is_some() {
-            rq.push_str(&format!(
-                "{}wlist_opens_at = ${}",
-                if bind_idx != 2 { ",\n" } else { "" },
-                bind_idx
-            ));
-        }
-        if start_bind_idx == bind_idx {
+        let mut generator = super::EditRequestAndArgsBuilder::new();
+        generator.add_if_some("wlist_name", updates.wlist_name)?;
+        generator.add_if_some("wlist_opens_at", updates.wlist_opens_at)?;
+        generator.add_if_some("wlist_closes_at", updates.wlist_closes_at)?;
+        generator.add_where("wlist_secret", admin_token)?;
+        if generator.bind_idx <= 2 {
             return Err(RepoError::EmptyUpdates {
                 context: "edit_waiting_list",
             });
         }
-        rq.push_str(rq_tail);
+        let rq = format!("{rq_head}{}{rq_tail}", generator.build_rq_str());
         debug!("edit request built: {}", rq);
-        let mut query = sqlx::query_as(&rq).bind(admin_token);
-        if let Some(value) = updates.wlist_name {
-            query = query.bind(value)
-        }
-        if let Some(value) = updates.wlist_closes_at {
-            query = query.bind(value)
-        }
-        if let Some(value) = updates.wlist_opens_at {
-            query = query.bind(value)
-        }
+        let query = sqlx::query_as_with(&rq, generator.args);
         Ok(query
             .fetch_one(&self.pool)
             .await
