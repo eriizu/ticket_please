@@ -10,6 +10,7 @@ async fn main() -> anyhow::Result<()> {
     let pool = setup_sqlx().await?;
     info!("databse connected");
     let repo = db::Repository::new(pool);
+    repo.mig().await.unwrap();
     web_server::start(std::sync::Arc::new(repo)).await?;
     Ok(())
 }

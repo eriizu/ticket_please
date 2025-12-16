@@ -1,5 +1,5 @@
 use super::{ArcRepo, HandlerError, dto::*};
-use chrono::prelude::*;
+use chrono::{Duration, prelude::*};
 use poem::web::{Data, Json, Path};
 
 #[poem::handler]
@@ -11,7 +11,7 @@ pub async fn index() -> String {
 pub async fn get_waiting_list(
     Path(id): Path<i32>,
     Data(repo): Data<&ArcRepo>,
-) -> Result<Json<WaitingListWithWaitingTokensDto>, HandlerError> {
+) -> Result<Json<WaitingListWithRelatedDto>, HandlerError> {
     let waiting_list = repo.get_waiting_list_by_id(id).await?;
     let waiting_tokens = repo
         .get_waiting_tokens_per_list(id)
@@ -19,9 +19,16 @@ pub async fn get_waiting_list(
         .drain(..)
         .map(|item| item.into())
         .collect();
-    Ok(Json(WaitingListWithWaitingTokensDto {
+    let slots = repo
+        .get_slot_by_list_id(id)
+        .await?
+        .drain(..)
+        .map(|x| x.into())
+        .collect();
+    Ok(Json(WaitingListWithRelatedDto {
         base: waiting_list.into(),
         waiting_tokens,
+        slots,
     }))
 }
 
@@ -60,8 +67,17 @@ pub async fn create_waiting_token(
         Some(Json(body)) => (body.client_name, body.slot_id),
         None => (None, None),
     };
-    let est_turn_time = if let Some(slot_id) = slot_id {
-        Some(get_slot_start_time_if_same_wlist(repo, slot_id, list_id).await?)
+    let waiting_list = repo.get_waiting_list_by_id(list_id).await?;
+    let mut est_turn_time = None;
+    let mut slot = if let Some(slot_id) = slot_id {
+        let slot = repo.get_slot_by_id(slot_id).await?;
+        if slot.wlist_id != list_id {
+            Err(HandlerError::Discrepancy {
+                context: "checking slot is part of waiting list",
+            })?;
+        }
+        est_turn_time = Some(slot.slot_starts_at);
+        Some(slot)
     } else {
         None
     };
@@ -73,7 +89,8 @@ pub async fn create_waiting_token(
             slot_id,
             est_turn_time,
         )
-        .await?
+        .await
+        .map(|token| (token, waiting_list, slot))?
         .into(),
     ))
 }
@@ -85,54 +102,32 @@ fn generate_secret() -> Result<String, HandlerError> {
     Ok(base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(buf))
 }
 
-async fn check_same_list_token_and_slot(
-    repo: &ArcRepo,
-    slot_id: i32,
-    waiting_token_criteria: crate::db::WaitingTokenCriteria,
-) -> Result<(), HandlerError> {
-    // TODO: is that correct?
-    let slot = repo.get_slot_by_id(slot_id).await?;
-    let waiting_token = repo.get_waiting_token(waiting_token_criteria).await?;
-    if slot.wlist_id != waiting_token.wlist_id {
-        Err(HandlerError::Discrepancy {
-            context: "checking slot is part of waiting list",
-        })
-    } else {
-        Ok(())
-    }
-}
-
-async fn get_slot_start_time_if_same_wlist(
-    repo: &ArcRepo,
-    slot_id: i32,
-    wlist_id: i32,
-) -> Result<DateTime<FixedOffset>, HandlerError> {
-    let slot = repo.get_slot_by_id(slot_id).await?;
-    if slot.wlist_id != wlist_id {
-        Err(HandlerError::Discrepancy {
-            context: "checking slot is part of waiting list",
-        })
-    } else {
-        Ok(slot.slot_starts_at)
-    }
-}
-
 #[poem::handler]
 pub async fn edit_waiting_token_as_client(
     Path(secret): Path<String>,
     Data(repo): Data<&ArcRepo>,
     Json(body): Json<AskWaitingTokenDto>,
-) -> Result<Json<WaitingTokenBaseDto>, HandlerError> {
+) -> Result<Json<WaitingTokenWithRelatedDto>, HandlerError> {
     let criteria = crate::db::WaitingTokenCriteria::Secret(secret);
     let mut updates: crate::db::EditWaitingToken = body.into();
-    if let Some(slot_id) = updates.slot_id {
+    let mut slot = if let Some(slot_id) = updates.slot_id {
+        let slot = repo.get_slot_by_id(slot_id).await?;
         let waiting_token = repo.get_waiting_token(criteria.clone()).await?;
-        updates.wtoken_est_turn_time =
-            Some(get_slot_start_time_if_same_wlist(repo, slot_id, waiting_token.wlist_id).await?);
-    }
-    Ok(Json(
-        repo.edit_waiting_token_2(criteria, updates).await?.into(),
-    ))
+        if slot.wlist_id != waiting_token.wlist_id {
+            Err(HandlerError::Discrepancy {
+                context: "checking slot is part of waiting list",
+            })?;
+        }
+        updates.wtoken_est_turn_time = Some(slot.slot_starts_at);
+        Some(slot)
+    } else {
+        None
+    };
+    let updated_waiting_token = repo.edit_waiting_token_2(criteria, updates).await?;
+    let waiting_list = repo
+        .get_waiting_list_by_id(updated_waiting_token.wlist_id)
+        .await?;
+    Ok(Json((updated_waiting_token, waiting_list, slot).into()))
 }
 
 #[derive(serde::Deserialize)]
@@ -146,18 +141,50 @@ pub async fn edit_waiting_token_as_admin(
     Path(params): Path<EditWaitingParams>,
     Data(repo): Data<&ArcRepo>,
     Json(body): Json<EditWaitingTokenDto>,
-) -> Result<Json<WaitingTokenBaseDto>, HandlerError> {
-    let waiting_list = repo.get_waiting_list_by_secret(&params.wl_secret).await?;
+) -> Result<Json<WaitingTokenWithRelatedDto>, HandlerError> {
     let criteria = crate::db::WaitingTokenCriteria::Id(params.wt_id);
     let mut updates: crate::db::EditWaitingToken = body.into();
-    if let Some(slot_id) = updates.slot_id {
-        let wtoken_est_turn_time =
-            Some(get_slot_start_time_if_same_wlist(repo, slot_id, waiting_list.wlist_id).await?);
-        if let None = updates.wtoken_est_turn_time {
-            updates.wtoken_est_turn_time = wtoken_est_turn_time;
+    let mut slot = if let Some(slot_id) = updates.slot_id {
+        let slot = repo.get_slot_by_id(slot_id).await?;
+        let waiting_token = repo.get_waiting_token(criteria.clone()).await?;
+        if slot.wlist_id != waiting_token.wlist_id {
+            Err(HandlerError::Discrepancy {
+                context: "checking slot is part of waiting list",
+            })?;
         }
+        updates.wtoken_est_turn_time = Some(slot.slot_starts_at);
+        Some(slot)
+    } else {
+        None
+    };
+    let updated_waiting_token = repo.edit_waiting_token_2(criteria, updates).await?;
+    let waiting_list = repo
+        .get_waiting_list_by_id(updated_waiting_token.wlist_id)
+        .await?;
+    Ok(Json((updated_waiting_token, waiting_list, slot).into()))
+}
+
+#[derive(serde::Deserialize)]
+struct GenerateSlotsParams {
+    wlist_secret: String,
+}
+
+#[poem::handler]
+pub async fn generate_slots_on_waiting_list(
+    Path(wlist_secret): Path<String>,
+    Data(repo): Data<&ArcRepo>,
+    Json(body): Json<GenerateSlotsDto>,
+) -> Result<String, HandlerError> {
+    let mut n_generated = 0;
+    let mut current_date = body.start;
+    let waiting_list = repo.get_waiting_list_by_secret(&wlist_secret).await?;
+    while n_generated < body.slot_number {
+        // TODO: respect breaks
+        let end = current_date + Duration::minutes(body.slot_duration_minutes.into());
+        repo.create_slot(current_date, end, waiting_list.wlist_id)
+            .await?;
+        current_date = end;
+        n_generated += 1;
     }
-    Ok(Json(
-        repo.edit_waiting_token_2(criteria, updates).await?.into(),
-    ))
+    Ok("generated".to_string())
 }

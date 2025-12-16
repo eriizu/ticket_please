@@ -90,7 +90,14 @@ pub async fn start(repo: Arc<crate::db::Repository>) -> anyhow::Result<()> {
     let routes = Route::new()
         .at("/", get(index))
         .at("/wl/:id", get(get_waiting_list).patch(patch_waiting_list))
-        .at("/wl/:wl_secret/wt/:wt_id", edit_waiting_token_as_admin)
+        .at(
+            "/wl/:wl_secret/wt/:wt_id",
+            patch(edit_waiting_token_as_admin),
+        )
+        .at(
+            "/wl/:wlst_secret/slots/gen",
+            post(generate_slots_on_waiting_list),
+        )
         .at("/wl", post(create_waiting_list))
         .at("/wl/:id/registration", post(create_waiting_token))
         .at("/wt/:secret", patch(edit_waiting_token_as_client))

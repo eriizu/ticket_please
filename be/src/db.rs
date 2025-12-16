@@ -1,10 +1,15 @@
 use chrono::prelude::*;
 mod wlist;
+use tracing::info;
 pub use wlist::*;
 mod wtoken;
 pub use wtoken::*;
 mod slot;
 pub use slot::*;
+
+use sqlx::migrate::Migrator;
+
+static MIGRATOR: Migrator = sqlx::migrate!(); // defaults to "./migrations"
 
 #[allow(unused)]
 #[derive(Debug, thiserror::Error)]
@@ -33,6 +38,12 @@ impl Repository {
     pub fn new(pool: sqlx::PgPool) -> Self {
         Self { pool }
     }
+
+    pub async fn mig(&self) -> anyhow::Result<()> {
+        info!("running migration");
+        MIGRATOR.run(&self.pool).await?;
+        Ok(())
+    }
 }
 
 struct EditRequestAndArgsBuilder {
@@ -52,7 +63,15 @@ impl EditRequestAndArgsBuilder {
         }
     }
 
-    pub fn add<T>(&mut self, name: &'static str, val: T) -> Result<(), RepoError>
+    pub fn has_assignments(&self) -> bool {
+        if self.where_idx.is_some() {
+            (self.names.len() - 1) != 0
+        } else {
+            self.names.len() != 0
+        }
+    }
+
+    pub fn add_assignment<T>(&mut self, name: &'static str, val: T) -> Result<(), RepoError>
     where
         T: for<'q> sqlx::Encode<'q, sqlx::Postgres> + sqlx::Type<sqlx::Postgres>,
     {
@@ -70,7 +89,7 @@ impl EditRequestAndArgsBuilder {
         T: for<'q> sqlx::Encode<'q, sqlx::Postgres> + sqlx::Type<sqlx::Postgres>,
     {
         if let Some(val) = val {
-            self.add(name, val)
+            self.add_assignment(name, val)
         } else {
             Ok(())
         }
@@ -122,9 +141,13 @@ mod test {
     #[test]
     fn generate_rq_str_wo_where() {
         let mut generator = super::EditRequestAndArgsBuilder::new();
-        generator.add("hello", "world").unwrap();
-        generator.add("age", 12).unwrap();
-        generator.add("name", "samuel").unwrap();
+        assert!(!generator.has_assignments());
+        generator.add_assignment("hello", "world").unwrap();
+        assert!(generator.has_assignments());
+        generator.add_assignment("age", 12).unwrap();
+        assert!(generator.has_assignments());
+        generator.add_assignment("name", "samuel").unwrap();
+        assert!(generator.has_assignments());
         let rq = generator.build_rq_str();
         assert_eq!(
             rq.trim(),
@@ -139,10 +162,15 @@ name = $3
     #[test]
     fn generate_rq_str_with_where() {
         let mut generator = super::EditRequestAndArgsBuilder::new();
-        generator.add("hello", "world").unwrap();
-        generator.add("age", 12).unwrap();
-        generator.add("name", "samuel").unwrap();
+        assert!(!generator.has_assignments());
+        generator.add_assignment("hello", "world").unwrap();
+        assert!(generator.has_assignments());
+        generator.add_assignment("age", 12).unwrap();
+        assert!(generator.has_assignments());
+        generator.add_assignment("name", "samuel").unwrap();
+        assert!(generator.has_assignments());
         generator.add_where("id", 14).unwrap();
+        assert!(generator.has_assignments());
         let rq = generator.build_rq_str();
         assert_eq!(
             rq.trim(),
@@ -156,12 +184,36 @@ WHERE id = $4
     }
 
     #[test]
+    fn generate_rq_str_first_where() {
+        let mut generator = super::EditRequestAndArgsBuilder::new();
+        assert!(!generator.has_assignments());
+        generator.add_where("id", 14).unwrap();
+        assert!(!generator.has_assignments());
+        generator.add_assignment("hello", "world").unwrap();
+        assert!(generator.has_assignments());
+        generator.add_assignment("age", 12).unwrap();
+        assert!(generator.has_assignments());
+        generator.add_assignment("name", "samuel").unwrap();
+        assert!(generator.has_assignments());
+        let rq = generator.build_rq_str();
+        assert_eq!(
+            rq.trim(),
+            r#"hello = $2,
+age = $3,
+name = $4
+WHERE id = $1
+"#
+            .trim()
+        );
+    }
+
+    #[test]
     fn generate_rq_str_middle_where() {
         let mut generator = super::EditRequestAndArgsBuilder::new();
-        generator.add("hello", "world").unwrap();
+        generator.add_assignment("hello", "world").unwrap();
         generator.add_where("id", 14).unwrap();
-        generator.add("age", 12).unwrap();
-        generator.add("name", "samuel").unwrap();
+        generator.add_assignment("age", 12).unwrap();
+        generator.add_assignment("name", "samuel").unwrap();
         let rq = generator.build_rq_str();
         assert_eq!(
             rq.trim(),

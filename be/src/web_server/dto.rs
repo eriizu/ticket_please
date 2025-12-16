@@ -1,6 +1,7 @@
 use chrono::prelude::*;
+use dotenvy::vars;
 
-#[derive(serde::Serialize)]
+#[derive(serde::Serialize, Debug)]
 pub struct WaitingListBaseDto {
     pub id: i32,
     pub name: String,
@@ -9,10 +10,11 @@ pub struct WaitingListBaseDto {
 }
 
 #[derive(serde::Serialize)]
-pub struct WaitingListWithWaitingTokensDto {
+pub struct WaitingListWithRelatedDto {
     #[serde(flatten)]
     pub base: WaitingListBaseDto,
     pub waiting_tokens: Vec<WaitingTokenBaseDto>,
+    pub slots: Vec<SlotBaseDto>,
 }
 
 #[derive(serde::Serialize)]
@@ -81,11 +83,21 @@ pub struct WaitingTokenBaseDto {
     pub waiting_list_id: i32,
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug, sqlx::FromRow)]
+#[derive(serde::Serialize, Debug, sqlx::FromRow)]
 pub struct WaitingTokenWithSecretDto {
     #[serde(flatten)]
     pub base: WaitingTokenBaseDto,
     pub secret: String,
+    pub waiting_list: WaitingListBaseDto,
+    pub slot: Option<SlotBaseDto>,
+}
+
+#[derive(serde::Serialize, Debug, sqlx::FromRow)]
+pub struct WaitingTokenWithRelatedDto {
+    #[serde(flatten)]
+    pub base: WaitingTokenBaseDto,
+    pub waiting_list: WaitingListBaseDto,
+    pub slot: Option<SlotBaseDto>,
 }
 
 impl From<crate::db::WaitingToken> for WaitingTokenBaseDto {
@@ -101,12 +113,60 @@ impl From<crate::db::WaitingToken> for WaitingTokenBaseDto {
     }
 }
 
-impl From<crate::db::WaitingToken> for WaitingTokenWithSecretDto {
-    fn from(src: crate::db::WaitingToken) -> Self {
-        let secret = src.wtoken_secret.clone();
+impl From<(crate::db::WaitingToken, crate::db::WaitingList)> for WaitingTokenWithSecretDto {
+    fn from(src: (crate::db::WaitingToken, crate::db::WaitingList)) -> Self {
+        let secret = src.0.wtoken_secret.clone();
         Self {
-            base: std::convert::From::from(src),
+            base: std::convert::From::from(src.0),
             secret,
+            waiting_list: src.1.into(),
+            slot: None,
+        }
+    }
+}
+
+impl
+    From<(
+        crate::db::WaitingToken,
+        crate::db::WaitingList,
+        Option<crate::db::Slot>,
+    )> for WaitingTokenWithSecretDto
+{
+    fn from(
+        src: (
+            crate::db::WaitingToken,
+            crate::db::WaitingList,
+            Option<crate::db::Slot>,
+        ),
+    ) -> Self {
+        let secret = src.0.wtoken_secret.clone();
+        Self {
+            base: std::convert::From::from(src.0),
+            secret,
+            waiting_list: src.1.into(),
+            slot: src.2.map(|x| x.into()),
+        }
+    }
+}
+
+impl
+    From<(
+        crate::db::WaitingToken,
+        crate::db::WaitingList,
+        Option<crate::db::Slot>,
+    )> for WaitingTokenWithRelatedDto
+{
+    fn from(
+        src: (
+            crate::db::WaitingToken,
+            crate::db::WaitingList,
+            Option<crate::db::Slot>,
+        ),
+    ) -> Self {
+        Self {
+            base: std::convert::From::from(src.0),
+            waiting_list: src.1.into(),
+            slot: src.2.map(|slot| slot.into()),
         }
     }
 }
@@ -148,9 +208,58 @@ impl std::convert::Into<crate::db::EditWaitingToken> for EditWaitingTokenDto {
 
 #[derive(serde::Deserialize)]
 pub struct GenerateSlotsDto {
-    start: DateTime<FixedOffset>,
-    slot_duration_minutes: u32,
-    break_duration_minutes: u32,
-    break_every_n_slots: u32,
-    slot_number: u32,
+    pub start: DateTime<FixedOffset>,
+    pub slot_duration_minutes: u32,
+    pub break_duration_minutes: u32,
+    pub break_every_n_slots: u32,
+    pub slot_number: u32,
+}
+
+#[derive(serde::Serialize, Debug)]
+pub struct SlotBaseDto {
+    pub id: i32,
+    pub starts_at: DateTime<FixedOffset>,
+    pub ends_at: DateTime<FixedOffset>,
+    pub wlist_id: i32,
+}
+
+#[derive(serde::Serialize)]
+pub struct SlotWithRelatedDto {
+    #[serde(flatten)]
+    pub base: SlotBaseDto,
+    pub waiting_list: WaitingListBaseDto,
+    pub waiting_token: Option<WaitingTokenBaseDto>,
+}
+
+impl std::convert::From<crate::db::Slot> for SlotBaseDto {
+    fn from(value: crate::db::Slot) -> Self {
+        Self {
+            id: value.slot_id,
+            wlist_id: value.wlist_id,
+            starts_at: value.slot_starts_at,
+            ends_at: value.slot_ends_at,
+        }
+    }
+}
+
+impl
+    std::convert::From<(
+        crate::db::Slot,
+        crate::db::WaitingList,
+        crate::db::WaitingToken,
+    )> for SlotWithRelatedDto
+{
+    fn from(
+        value: (
+            crate::db::Slot,
+            crate::db::WaitingList,
+            crate::db::WaitingToken,
+        ),
+    ) -> Self {
+        Self {
+            base: value.0.into(),
+            waiting_list: value.1.into(),
+            waiting_token: Some(value.2.into()),
+        }
+    }
 }
