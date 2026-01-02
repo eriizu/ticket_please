@@ -14,7 +14,7 @@ static MIGRATOR: Migrator = sqlx::migrate!(); // defaults to "./migrations"
 #[allow(unused)]
 #[derive(Debug, thiserror::Error)]
 pub enum RepoError {
-    #[error("{context}not found")]
+    #[error("{context}: not found")]
     NotFound { context: &'static str },
     #[error("{context}: repo error sql: {error}")]
     Sqlx {

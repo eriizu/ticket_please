@@ -1,6 +1,6 @@
 use super::{RepoError, Repository};
 use chrono::prelude::*;
-use tracing::debug;
+use tracing::{debug, instrument};
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, sqlx::FromRow)]
 pub struct Slot {
@@ -18,6 +18,7 @@ pub struct PartialSlot {
 }
 
 impl Repository {
+    #[instrument(skip(self), err, ret)]
     pub async fn get_slot_by_id(&self, id: i32) -> Result<Slot, RepoError> {
         let slot = sqlx::query_as(
             "select slot_id, slot_starts_at, slot_ends_at, wlist_id from slot where slot_id = $1",
@@ -32,6 +33,36 @@ impl Repository {
         Ok(slot)
     }
 
+    #[instrument(skip(self), err, ret)]
+    pub async fn delete_slot_by_id_and_secret(
+        &self,
+        id: i32,
+        secret: String,
+    ) -> Result<(), RepoError> {
+        let db_response = sqlx::query!(
+            r#"DELETE FROM slot s
+USING waiting_list wl
+WHERE s.wlist_id = wl.wlist_id
+  AND s.slot_id = $1              -- slot id
+  AND wl.wlist_secret = $2        -- list secret;"#,
+            id,
+            secret
+        )
+        .execute(&self.pool)
+        .await
+        .map_err(|e| RepoError::Sqlx {
+            error: e,
+            context: "delete_slot_by_id_and_secret",
+        })?;
+        if db_response.rows_affected() == 0 {
+            Err(RepoError::NotFound {
+                context: "delete_slot_by_id_and_secret",
+            })?
+        }
+        Ok(())
+    }
+
+    #[instrument(skip(self), err)]
     pub async fn get_slot_by_list_id(&self, list_id: i32) -> Result<Vec<Slot>, RepoError> {
         let slots = sqlx::query_as(
             "select slot_id, slot_starts_at, slot_ends_at, wlist_id from slot where wlist_id = $1",
@@ -46,6 +77,7 @@ impl Repository {
         Ok(slots)
     }
 
+    #[instrument(skip(self), err, ret)]
     pub async fn create_slot(
         &self,
         starts_at: DateTime<FixedOffset>,
@@ -74,6 +106,7 @@ RETURNING
         Ok(slot)
     }
 
+    #[instrument(skip(self), err, ret)]
     pub async fn edit_slot(&self, slot_id: i32, updates: PartialSlot) -> Result<Slot, RepoError> {
         let rq_head = "UPDATE slot SET\n";
         let rq_tail = r#"RETURNING
@@ -81,15 +114,15 @@ RETURNING
     slot_starts_at,
     slot_ends_at,
     wlist_id"#;
-        todo!("this isn't the code to edit a slot, it needs to be written");
+        // todo!("this isn't the code to edit a slot, it needs to be written");
         let mut generator = super::EditRequestAndArgsBuilder::new();
-        generator.add_if_some("wlist_name", updates.slot_starts_at)?;
-        generator.add_if_some("wlist_opens_at", updates.slot_ends_at)?;
-        generator.add_if_some("wlist_closes_at", updates.wlist_id)?;
+        generator.add_if_some("slot_starts_at", updates.slot_starts_at)?;
+        generator.add_if_some("slot_ends_at", updates.slot_ends_at)?;
+        generator.add_if_some("wlist_id", updates.wlist_id)?;
         generator.add_where("slot_id", slot_id)?;
-        if generator.bind_idx <= 2 {
+        if !generator.has_assignments() {
             return Err(RepoError::EmptyUpdates {
-                context: "edit_waiting_list",
+                context: "edit_slot",
             });
         }
         let rq = format!("{rq_head}\n{}\n{rq_tail}", generator.build_rq_str());

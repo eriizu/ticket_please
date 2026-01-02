@@ -4,7 +4,7 @@ mod dto;
 mod handlers;
 use handlers::*;
 
-use poem::{EndpointExt, Route, Server, get, listener::TcpListener, patch, post};
+use poem::{EndpointExt, Route, Server, delete, get, listener::TcpListener, patch, post};
 
 type ArcRepo = Arc<crate::db::Repository>;
 
@@ -89,20 +89,35 @@ impl std::convert::From<crate::db::RepoError> for HandlerError {
 pub async fn start(repo: Arc<crate::db::Repository>) -> anyhow::Result<()> {
     let routes = Route::new()
         .at("/", get(index))
-        .at("/wl/:id", get(get_waiting_list).patch(patch_waiting_list))
         .at(
-            "/wl/:wl_secret/wt/:wt_id",
-            patch(edit_waiting_token_as_admin),
+            "/list",
+            get(waiting_list_get_many).post(waiting_list_create),
         )
         .at(
-            "/wl/:wlst_secret/slots/gen",
-            post(generate_slots_on_waiting_list),
+            "/list/:id",
+            get(waiting_list_get)
+                .patch(waiting_list_patch)
+                .delete(waiting_list_delete),
         )
-        .at("/wl", post(create_waiting_list))
-        .at("/wl/:id/registration", post(create_waiting_token))
-        .at("/wt/:secret", patch(edit_waiting_token_as_client))
+        .at(
+            "/list/:list_secret/token/:token_id",
+            patch(waiting_token_edit_as_admin),
+        )
+        .at(
+            "/list/:list_secret/slots/gen",
+            post(slots_generate_on_waiting_list),
+        )
+        .at("/list/:list_secret/slots/:slot_id", delete(slot_delete))
+        .at("/list/:id/reg", post(waiting_token_create))
+        .at(
+            "/token/:secret",
+            get(waiting_token_get)
+                .patch(waiting_token_edit_as_client)
+                .delete(waiting_token_delete),
+        )
         .data(repo)
-        .with(poem::middleware::Tracing);
+        .with(poem::middleware::Tracing)
+        .with(poem::middleware::RequestId::default());
     Server::new(TcpListener::bind("0.0.0.0:3000"))
         .run(routes)
         .await?;

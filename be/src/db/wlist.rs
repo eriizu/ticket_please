@@ -1,6 +1,6 @@
 use super::{RepoError, Repository};
 use chrono::prelude::*;
-use tracing::{debug, error, warn};
+use tracing::{debug, error, instrument, warn};
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, sqlx::FromRow)]
 pub struct WaitingList {
@@ -39,6 +39,30 @@ pub struct PartialWaitingList {
 }
 
 impl Repository {
+    #[instrument(skip(self), err)]
+    pub async fn get_all_waiting_list(&self, open: bool) -> Result<Vec<WaitingList>, RepoError> {
+        use futures_util::StreamExt;
+        let now = Utc::now();
+        let mut waiting_list = sqlx::query_as::<_, WaitingList>(
+            "SELECT wlist_id, wlist_secret, wlist_name, wlist_opens_at, wlist_closes_at FROM waiting_list WHERE wlist_closes_at is null OR wlist_closes_at > $1",
+        )
+            .bind(now)
+            .fetch(&self.pool);
+        let mut out = vec![];
+        while let Some(row) = waiting_list.next().await {
+            let row = row.map_err(|e| RepoError::Sqlx {
+                error: e,
+                context: "get_waiting_list_by_id",
+            })?;
+            // if row.is_open(now) == open {
+            //     out.push(row);
+            // }
+            out.push(row);
+        }
+        Ok(out)
+    }
+
+    #[instrument(skip(self), err, ret)]
     pub async fn get_waiting_list_by_id(&self, id: i32) -> Result<WaitingList, RepoError> {
         let waiting_list = sqlx::query_as(
             "SELECT wlist_id, wlist_secret, wlist_name, wlist_opens_at, wlist_closes_at FROM waiting_list WHERE wlist_id = $1",
@@ -49,6 +73,24 @@ impl Repository {
         Ok(waiting_list)
     }
 
+    #[instrument(skip(self), err, ret)]
+    pub async fn delete_waiting_list(&self, secret: String) -> Result<(), RepoError> {
+        let db_response = sqlx::query!("DELETE FROM waiting_list WHERE wlist_secret = $1", secret)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| RepoError::Sqlx {
+                error: e,
+                context: std::module_path!(),
+            })?;
+        if db_response.rows_affected() == 0 {
+            Err(RepoError::NotFound {
+                context: "delete_waiting_list",
+            })?
+        }
+        Ok(())
+    }
+
+    #[instrument(skip(self), err, ret)]
     pub async fn get_waiting_list_by_secret(&self, secret: &str) -> Result<WaitingList, RepoError> {
         let waiting_list = sqlx::query_as(
             "SELECT wlist_id, wlist_secret, wlist_name, wlist_opens_at, wlist_closes_at FROM waiting_list WHERE wlist_secret = $1",
@@ -59,18 +101,23 @@ impl Repository {
         Ok(waiting_list)
     }
 
+    #[instrument(skip(self), err, ret)]
     pub async fn create_waiting_list(
         &self,
         admin_token: &str,
         name: &str,
+        opens_at: Option<DateTime<FixedOffset>>,
+        closes_at: Option<DateTime<FixedOffset>>,
     ) -> Result<WaitingList, RepoError> {
         let waiting_list = sqlx::query_as(
-            r#"INSERT INTO waiting_list(wlist_secret, wlist_name)
-VALUES ($1, $2)
+            r#"INSERT INTO waiting_list(wlist_secret, wlist_name, wlist_opens_at, wlist_closes_at)
+VALUES ($1, $2, $3, $4)
 RETURNING wlist_id, wlist_name, wlist_secret, wlist_opens_at, wlist_closes_at"#,
         )
         .bind(admin_token)
         .bind(name)
+        .bind(opens_at)
+        .bind(closes_at)
         .fetch_one(&self.pool)
         .await
         .map_err(|e| RepoError::Sqlx {
@@ -80,6 +127,7 @@ RETURNING wlist_id, wlist_name, wlist_secret, wlist_opens_at, wlist_closes_at"#,
         Ok(waiting_list)
     }
 
+    #[instrument(skip(self), err, ret)]
     pub async fn edit_waiting_list(
         &self,
         admin_token: &str,
@@ -97,7 +145,7 @@ RETURNING wlist_id, wlist_name, wlist_secret, wlist_opens_at, wlist_closes_at"#,
         generator.add_if_some("wlist_opens_at", updates.wlist_opens_at)?;
         generator.add_if_some("wlist_closes_at", updates.wlist_closes_at)?;
         generator.add_where("wlist_secret", admin_token)?;
-        if generator.bind_idx <= 2 {
+        if !generator.has_assignments() {
             return Err(RepoError::EmptyUpdates {
                 context: "edit_waiting_list",
             });

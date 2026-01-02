@@ -13,7 +13,7 @@ pub struct WaitingListBaseDto {
 pub struct WaitingListWithRelatedDto {
     #[serde(flatten)]
     pub base: WaitingListBaseDto,
-    pub waiting_tokens: Vec<WaitingTokenBaseDto>,
+    pub tokens: Vec<WaitingTokenBaseDto>,
     pub slots: Vec<SlotBaseDto>,
 }
 
@@ -80,7 +80,8 @@ pub struct WaitingTokenBaseDto {
     pub generated_at: DateTime<FixedOffset>,
     pub est_turn_time: Option<DateTime<FixedOffset>>,
     pub real_turn_time: Option<DateTime<FixedOffset>>,
-    pub waiting_list_id: i32,
+    pub list_id: i32,
+    pub slot_id: Option<i32>,
 }
 
 #[derive(serde::Serialize, Debug, sqlx::FromRow)]
@@ -88,7 +89,7 @@ pub struct WaitingTokenWithSecretDto {
     #[serde(flatten)]
     pub base: WaitingTokenBaseDto,
     pub secret: String,
-    pub waiting_list: WaitingListBaseDto,
+    pub list: WaitingListBaseDto,
     pub slot: Option<SlotBaseDto>,
 }
 
@@ -96,7 +97,7 @@ pub struct WaitingTokenWithSecretDto {
 pub struct WaitingTokenWithRelatedDto {
     #[serde(flatten)]
     pub base: WaitingTokenBaseDto,
-    pub waiting_list: WaitingListBaseDto,
+    pub list: WaitingListBaseDto,
     pub slot: Option<SlotBaseDto>,
 }
 
@@ -108,7 +109,8 @@ impl From<crate::db::WaitingToken> for WaitingTokenBaseDto {
             generated_at: src.wtoken_generated_at,
             est_turn_time: src.wtoken_est_turn_time,
             real_turn_time: src.wtoken_real_turn_time,
-            waiting_list_id: src.wlist_id,
+            list_id: src.wlist_id,
+            slot_id: src.slot_id,
         }
     }
 }
@@ -119,7 +121,7 @@ impl From<(crate::db::WaitingToken, crate::db::WaitingList)> for WaitingTokenWit
         Self {
             base: std::convert::From::from(src.0),
             secret,
-            waiting_list: src.1.into(),
+            list: src.1.into(),
             slot: None,
         }
     }
@@ -143,7 +145,7 @@ impl
         Self {
             base: std::convert::From::from(src.0),
             secret,
-            waiting_list: src.1.into(),
+            list: src.1.into(),
             slot: src.2.map(|x| x.into()),
         }
     }
@@ -165,7 +167,7 @@ impl
     ) -> Self {
         Self {
             base: std::convert::From::from(src.0),
-            waiting_list: src.1.into(),
+            list: src.1.into(),
             slot: src.2.map(|slot| slot.into()),
         }
     }
@@ -220,22 +222,22 @@ pub struct SlotBaseDto {
     pub id: i32,
     pub starts_at: DateTime<FixedOffset>,
     pub ends_at: DateTime<FixedOffset>,
-    pub wlist_id: i32,
+    pub list_id: i32,
 }
 
 #[derive(serde::Serialize)]
 pub struct SlotWithRelatedDto {
     #[serde(flatten)]
     pub base: SlotBaseDto,
-    pub waiting_list: WaitingListBaseDto,
-    pub waiting_token: Option<WaitingTokenBaseDto>,
+    pub list: WaitingListBaseDto,
+    pub token: Option<WaitingTokenBaseDto>,
 }
 
 impl std::convert::From<crate::db::Slot> for SlotBaseDto {
     fn from(value: crate::db::Slot) -> Self {
         Self {
             id: value.slot_id,
-            wlist_id: value.wlist_id,
+            list_id: value.wlist_id,
             starts_at: value.slot_starts_at,
             ends_at: value.slot_ends_at,
         }
@@ -258,8 +260,8 @@ impl
     ) -> Self {
         Self {
             base: value.0.into(),
-            waiting_list: value.1.into(),
-            waiting_token: Some(value.2.into()),
+            list: value.1.into(),
+            token: Some(value.2.into()),
         }
     }
 }

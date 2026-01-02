@@ -1,6 +1,6 @@
 use super::{RepoError, Repository};
 use chrono::prelude::*;
-use tracing::debug;
+use tracing::{debug, instrument};
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, sqlx::FromRow)]
 pub struct WaitingToken {
@@ -22,7 +22,7 @@ pub struct EditWaitingToken {
     pub slot_id: Option<i32>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum WaitingTokenCriteria {
     Id(i32),
     Secret(String),
@@ -38,6 +38,7 @@ impl WaitingTokenCriteria {
 }
 
 impl Repository {
+    #[instrument(skip(self), err, ret)]
     pub async fn get_waiting_token(
         &self,
         criteria: WaitingTokenCriteria,
@@ -53,7 +54,7 @@ impl Repository {
     wlist_id,
     slot_id
 from waiting_token
-where {} is $1
+where {} = $1
     "#,
             criteria.sql_field_name()
         );
@@ -71,6 +72,7 @@ where {} is $1
         })?)
     }
 
+    #[instrument(skip(self), err, ret)]
     pub async fn create_waiting_token(
         &self,
         wtoken_secret: &str,
@@ -108,6 +110,7 @@ RETURNING
         Ok(waiting_token)
     }
 
+    #[instrument(skip(self), err, ret)]
     pub async fn edit_waiting_token_2(
         &self,
         criteria: WaitingTokenCriteria,
@@ -132,6 +135,11 @@ RETURNING
             WaitingTokenCriteria::Id(id) => generator.add_where("wtoken_id", id)?,
             WaitingTokenCriteria::Secret(secret) => generator.add_where("wtoken_secret", secret)?,
         }
+        if !generator.has_assignments() {
+            return Err(RepoError::EmptyUpdates {
+                context: "edit_waiting_token",
+            });
+        }
         let rq = format!("{rq_head}\n{}\n{rq_tail}", generator.build_rq_str());
         debug!("edit request built: {}", rq);
         Ok(sqlx::query_as_with(&rq, generator.args)
@@ -143,6 +151,7 @@ RETURNING
             })?)
     }
 
+    #[instrument(skip(self), err)]
     pub async fn get_waiting_tokens_per_list(
         &self,
         list_id: i32,
@@ -168,5 +177,23 @@ WHERE wlist_id = $1"#,
             context: "get_waiting_tokens_per_list",
         })?;
         Ok(waiting_tokens)
+    }
+
+    #[instrument(skip(self), err, ret)]
+    pub async fn delete_waiting_token(&self, secret: String) -> Result<(), RepoError> {
+        let db_response =
+            sqlx::query!("DELETE FROM waiting_token WHERE wtoken_secret = $1", secret)
+                .execute(&self.pool)
+                .await
+                .map_err(|e| RepoError::Sqlx {
+                    error: e,
+                    context: std::module_path!(),
+                })?;
+        if db_response.rows_affected() == 0 {
+            Err(RepoError::NotFound {
+                context: "delete_waiting_token",
+            })?
+        }
+        Ok(())
     }
 }
