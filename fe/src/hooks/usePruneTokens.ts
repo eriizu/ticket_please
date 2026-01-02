@@ -9,7 +9,7 @@ export function usePruneTokens(storage: models.PersistentStorage, setStorage: (v
 
   return useMutation({
     mutationFn: async () => {
-      console.log("mutating with", storage);
+      console.log("mutating with", storage.known_tokens);
       // Validate all tokens
       const validationPromises = storage.known_tokens.map(async (token) => {
         const res = await fetch(`/api/token/${token.secret}`);
@@ -25,6 +25,7 @@ export function usePruneTokens(storage: models.PersistentStorage, setStorage: (v
         .map((r) => r.tokenId);
 
       // Update storage
+      storage.removeTokens(invalidIds);
 
       return invalidIds;
     },

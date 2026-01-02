@@ -12,9 +12,12 @@ export const Route = createFileRoute("/")({
 
 function App() {
   return (
-    <div className="container mx-auto">
+    <>
+      <div className="my-2">
+        <TokenSumary />
+      </div>
       <ManyWaitingList />
-    </div>
+    </>
   );
 }
 
@@ -58,7 +61,10 @@ function ManyWaitingList() {
             list={e}
             setRegisteringFor={setRegisteringFor}
           />
-          <RegisterModal onClose={() => setRegisteringFor(null)} registeringFor={registeringFor}/>
+          <RegisterModal
+            onClose={() => setRegisteringFor(null)}
+            registeringFor={registeringFor}
+          />
         </>
       ))}
     </div>
@@ -88,8 +94,13 @@ function RegisterModal(props: {
       title="Name for the registration?"
     >
       <form onSubmit={onSubmit}>
-        <label htmlFor="client_name" >Name</label>
-        <input ref={inputRef} name="client_name" className="ml-1 p-1 border-b" type="text" />
+        <label htmlFor="client_name">Name</label>
+        <input
+          ref={inputRef}
+          name="client_name"
+          className="ml-1 p-1 border-b"
+          type="text"
+        />
         <button type="submit">Confirm</button>
       </form>
     </Modal>
@@ -149,9 +160,7 @@ function MultiModeCard({
   // );
   const tata = useMemo(() => {
     const groupedslots = groupSlotsByLocalStartDateSorted(list.slots);
-    return Object.entries(groupedslots).sort(([a], [b]) =>
-      a.localeCompare(b),
-    );
+    return Object.entries(groupedslots).sort(([a], [b]) => a.localeCompare(b));
   }, [list.slots]);
   if (mode === "wl") {
     return (
@@ -208,7 +217,7 @@ function SingleWaitingListTitle({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-3 p-2 m-2 border rounded-md border-neutral-500">
+    <div className="flex flex-col gap-3 p-2 border rounded-md border-neutral-500">
       <div>
         <div className="text-2xl">{list.name}</div>
         <div className="text-neutral-800 text-sm">
@@ -350,6 +359,7 @@ import {
   formatRelativeTime,
   type FormatRelativeTimeOptions,
 } from "../utils/date";
+import { TokenSumary } from "@/components/TokenSumary";
 
 function DateInWaitingList({
   fieldName,

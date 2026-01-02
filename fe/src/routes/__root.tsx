@@ -13,9 +13,11 @@ import Header from "../components/Header";
 export const Route = createRootRoute({
   component: () => (
     <>
-      <Header />
       <QueryClientProvider client={queryClient}>
-        <Outlet />
+        <div className="container mx-auto p-2">
+          <Header />
+          <Outlet />
+        </div>
       </QueryClientProvider>
       <TanStackDevtools
         config={{
