@@ -1,0 +1,7 @@
+{
+    "start": "2026-01-01T14:00:00+0100",
+    "slot_duration_minutes": 20,
+    "break_duration_minutes": 15,
+    "break_every_n_slots": 5,
+    "slot_number": 13
+}

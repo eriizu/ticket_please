@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM slot s\nUSING waiting_list wl\nWHERE s.wlist_id = wl.wlist_id\n  AND s.slot_id = $1              -- slot id\n  AND wl.wlist_secret = $2        -- list secret;",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e515cd2ba897c565d8bc3cdf036ce70486d09a73402ddb86627260cb03e1d29f"
+}

@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM waiting_list WHERE wlist_secret = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "86b7b063ba7fb915c56bc61b0415e7e62af0922df7b5d57b43a549772a26fe9e"
+}
