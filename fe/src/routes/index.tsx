@@ -128,13 +128,13 @@ function SlotOpen2({ slot }: { slot: typeof models.SlotBase.infer }) {
 function SlotTaken1({ slot }: { slot: typeof models.SlotBase.infer }) {
   return (
     <div className="border h-12 rounded-md p-1 flex items-center gap-3 text-neutral-700">
-      <div className="w-20">
+      <div className="flex-none">
         <div className="tabular-nums text-xl">
           {absoluteTimeFormater.format(slot.starts_at)}
         </div>
-        <div className="text-red-800 text-xs font-mono">NOT AVAIL.</div>
+        <div className="text-red-800 text-xs font-mono w-fit">NOT AVAIL.</div>
       </div>
-      <div className="align-bottom w-60">
+      <div className="align-bottom">
         {/* <div className="text-red-800">:: not avail. ::</div>*/}
         <div className="whitespace-nowrap overflow-hidden text-ellipsis text-xs">
           {slot.registered_client_name}
