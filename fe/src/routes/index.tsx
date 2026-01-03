@@ -110,15 +110,15 @@ function RegisterModal(props: {
 function SlotOpen2({ slot }: { slot: typeof models.SlotBase.infer }) {
   return (
     <div className="border h-12 rounded-md p-1 flex items-center gap-3">
-      <div className="w-20">
+      <div className="w-20 flex-none">
         <div className="tabular-nums text-xl">
           {absoluteTimeFormater.format(slot.starts_at)}
         </div>
         <div className="text-green-800 text-xs font-mono">AVAILABLE</div>
       </div>
-      <div className="w-30">
-        <button type="button" className="border w-fit px-1" onClick={(e) => { }}>
-          register →
+      <div className="flex place-content-end w-full">
+        <button type="button" className="border rounded-sm w-fit px-1" onClick={(e) => { }}>
+          + register
         </button>
       </div>
     </div>
@@ -197,7 +197,7 @@ function MultiModeCard({
 
 function SlotsGrid({ slots }: { slots: Array<typeof models.SlotBase.infer> }) {
   return (
-    <div className="grid grid-cols-4 gap-1">
+    <div className="grid grid-cols-1 lg:grid-cols-4 xl:grid-cols-5 gap-1">
       {slots.map((slot) => {
         if (slot.registered_client_name) {
           return <SlotTaken1 slot={slot} key={slot.id} />;
