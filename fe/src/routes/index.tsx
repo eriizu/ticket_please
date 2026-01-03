@@ -21,11 +21,10 @@ function App() {
   );
 }
 
-type Registration =
-  | {
-    slot_id: number;
-  }
-  | { list_id: number };
+type Registration = {
+  list_id: number;
+  slot_id?: number;
+};
 
 function ManyWaitingList() {
   const { data, isPending, error } = useQuery({
@@ -61,10 +60,12 @@ function ManyWaitingList() {
             list={e}
             setRegisteringFor={setRegisteringFor}
           />
-          <RegisterModal
-            onClose={() => setRegisteringFor(null)}
-            registeringFor={registeringFor}
-          />
+          {registeringFor && (
+            <RegisterModal
+              onClose={() => setRegisteringFor(null)}
+              registeringFor={registeringFor}
+            />
+          )}
         </>
       ))}
     </div>
@@ -73,7 +74,7 @@ function ManyWaitingList() {
 
 function RegisterModal(props: {
   onClose: () => void;
-  registeringFor: Registration | null;
+  registeringFor: Registration;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
@@ -82,9 +83,25 @@ function RegisterModal(props: {
     }
   }, [props.registeringFor]);
 
+  const [storage, setStorage] = usePersistent();
+  const [clientName, setClientName] = useState(storage.last_used_name || "");
+
+  const {
+    isPending,
+    status,
+    mutate: registerOnList,
+  } = useRegisterOnList(
+    {
+      list_id: props.registeringFor.list_id,
+      slot_id: props.registeringFor.slot_id,
+    },
+    storage,
+    setStorage,
+  );
+
   const onSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // TODO: write the actual tanstack query migration
+    registerOnList(clientName);
   };
 
   return (
@@ -93,15 +110,29 @@ function RegisterModal(props: {
       onClose={props.onClose}
       title="Name for the registration?"
     >
-      <form onSubmit={onSubmit}>
-        <label htmlFor="client_name">Name</label>
-        <input
-          ref={inputRef}
-          name="client_name"
-          className="ml-1 p-1 border-b"
-          type="text"
-        />
-        <button type="submit">Confirm</button>
+      <form onSubmit={onSubmit} className="flex gap-4 flex-col">
+        <div>
+          <label htmlFor="client_name">Name</label>
+          <input
+            ref={inputRef}
+            name="client_name"
+            className="ml-1 p-1 border-b"
+            type="text"
+            value={clientName}
+            onChange={(e) => setClientName(e.target.value)}
+            disabled={isPending}
+          />
+        </div>
+        <div>
+          <button
+            type="submit"
+            disabled={isPending}
+            className="border rounded-md bg-green-200 hover:bg-green-300 disabled:bg-amber-200 px-1"
+          >
+            Confirm
+          </button>
+        </div>
+        <div>Status: {status}</div>
       </form>
     </Modal>
   );
@@ -117,7 +148,11 @@ function SlotOpen2({ slot }: { slot: typeof models.SlotBase.infer }) {
         <div className="text-green-800 text-xs font-mono">AVAILABLE</div>
       </div>
       <div className="flex place-content-end w-full">
-        <button type="button" className="border rounded-sm w-fit px-1" onClick={(e) => { }}>
+        <button
+          type="button"
+          className="border rounded-sm w-fit px-1"
+          onClick={(e) => { }}
+        >
           + register
         </button>
       </div>
@@ -360,6 +395,8 @@ import {
   type FormatRelativeTimeOptions,
 } from "../utils/date";
 import { TokenSumary } from "@/components/TokenSumary";
+import { useRegisterOnList } from "@/hooks/useRegisterOnList";
+import { usePersistent } from "@/hooks/usePersistent";
 
 function DateInWaitingList({
   fieldName,

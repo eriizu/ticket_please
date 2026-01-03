@@ -20,6 +20,7 @@ export function useTokenValidation(tokens: (typeof models.KnownToken.infer)[]) {
   const isLoading = results.some((r) => r.isLoading);
   const invalidTokenIds = results
     .filter((r) => r.data?.isValid === false)
+    // biome-ignore lint/style/noNonNullAssertion: the value is checked in the filter
     .map((r) => r.data!.tokenId);
 
   return { isLoading, invalidTokenIds, results };

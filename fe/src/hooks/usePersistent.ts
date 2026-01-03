@@ -5,7 +5,6 @@ const KNOWN_TOKENS_EXAMPLE: (typeof models.KnownToken.infer)[] = [
   { id: 1, slot_id: null, list_id: 25, secret: "toto" },
   { id: 2, slot_id: null, list_id: 26, secret: "tata" },
   { id: 3, slot_id: null, list_id: 27, secret: "riri" },
-  { id: 4, slot_id: null, list_id: 28, secret: "npYYc3Nl4oxoY2fNb1Ao67t047h8YsR5z4ZTDDWvgyQ" },
 ];
 
 
