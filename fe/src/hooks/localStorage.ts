@@ -1,5 +1,13 @@
-import type { unknown } from "arktype/internal/keywords/ts.ts";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useCallback, useEffect, useState } from "react";
+
+const CUSTOM_STORAGE_EVENT = "local-storage-update";
+type CustomStorageEvent = CustomEvent<{key: string, newValue: string}>;
+
+declare global {
+  interface WindowEventMap {
+    "local-storage-update": CustomStorageEvent;
+  }
+}
 
 /**
  * A hook to manage localStorage with multi-tab synchronization.
@@ -44,8 +52,14 @@ export function useLocalStorage<T>(
         setStoredValue(valueToStore);
 
         // Save to local storage
+        const stringifiedValue = JSON.stringify(valueToStore);
         if (typeof window !== "undefined") {
-          window.localStorage.setItem(key, JSON.stringify(valueToStore));
+          window.localStorage.setItem(key, stringifiedValue);
+          window.dispatchEvent(
+            new CustomEvent(CUSTOM_STORAGE_EVENT, {
+              detail: { key, newValue: stringifiedValue },
+            }),
+          );
         }
       } catch (error) {
         console.error(`Error setting localStorage key “${key}”:`, error);
@@ -74,16 +88,32 @@ export function useLocalStorage<T>(
       }
     };
 
+    const handleCustomEvent = (event: CustomStorageEvent) => {
+      if (event.type === CUSTOM_STORAGE_EVENT) {
+        if (event.detail.key !== key) return;
+        try {
+          const raw = JSON.parse(event.detail.newValue);
+          if (construct) {
+            setStoredValue(construct(raw));
+          } else {
+            setStoredValue(raw);
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    };
+
     // Add the event listener
     window.addEventListener("storage", handleStorageChange);
+    window.addEventListener(CUSTOM_STORAGE_EVENT, handleCustomEvent);
 
     // Clean up on unmount
     return () => {
       window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener(CUSTOM_STORAGE_EVENT, handleCustomEvent);
     };
   }, [key, initialValue, construct]);
 
   return [storedValue, setValue] as const;
 }
-// Usage in a component:
-// const [theme, setTheme] = useLocalStorage("theme", "light");
