@@ -23,6 +23,9 @@ export function useRegisterOnList(
           client_name: client_name,
           slot_id: registration.slot_id,
         }),
+        headers: {
+          "Content-Type": "application/json",
+        },
       });
       if (res.status < 200 && res.status > 299) {
         throw new Error("request failed", { cause: await res.text() });

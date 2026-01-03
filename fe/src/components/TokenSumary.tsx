@@ -3,6 +3,14 @@ import { usePersistent } from "@/hooks/usePersistent";
 import { useTokenValidation } from "@/hooks/useTokenValidation";
 
 export function TokenSumary() {
+  return (
+    <div className="h-6 text-neutral-800">
+      <TokenSumaryInner />
+    </div>
+  );
+}
+
+function TokenSumaryInner() {
   const [persistent, setPersistent] = usePersistent();
   const pruneMutation = usePruneTokens(persistent, setPersistent);
   const handlePrune = async () => {
@@ -22,13 +30,13 @@ export function TokenSumary() {
   ).length;
   const allValid = invalid_count === 0;
   if (total_count === 0) {
-    return <div className="text-neutral-800">You have no waiting token on this browser.</div>;
+    return "You have no waiting token on this browser.";
   }
   if (allValid) {
-    return <div className="text-neutral-800">All your waiting tokens are still valid ✓</div>;
+    return "All your waiting tokens are still valid ✓";
   }
   return (
-    <div className="text-neutral-900">
+    <>
       <span>
         {invalid_count} of your {total_count} token·s are no longer valid and
         can be pruned:
@@ -41,6 +49,6 @@ export function TokenSumary() {
       >
         {pruneMutation.isPending ? "pruning..." : "click here to prune ♻"}
       </button>
-    </div>
+    </>
   );
 }

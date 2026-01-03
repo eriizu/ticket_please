@@ -3,7 +3,7 @@ import * as models from "../models";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { groupSlotsByLocalStartDateSorted } from "../utils/slots";
 import { Modal } from "../components/Modal";
-import { useQuery } from "@tanstack/react-query";
+import { useIsFetching, useQuery } from "@tanstack/react-query";
 import { type } from "arktype";
 
 export const Route = createFileRoute("/")({
@@ -11,10 +11,14 @@ export const Route = createFileRoute("/")({
 });
 
 function App() {
+  const isFetch = useIsFetching();
   return (
     <>
       <div className="my-2">
         <TokenSumary />
+      </div>
+      <div className="my-2 text-neutral-800">
+        Requests status: {isFetch ? "fetching..." : "settled."}
       </div>
       <ManyWaitingList />
     </>
@@ -104,6 +108,12 @@ function RegisterModal(props: {
     registerOnList(clientName);
   };
 
+  useEffect(() => {
+    if (status === "success") {
+      props.onClose();
+    }
+  }, [status, props.onClose]);
+
   return (
     <Modal
       isOpen={!!props.registeringFor}
@@ -138,7 +148,13 @@ function RegisterModal(props: {
   );
 }
 
-function SlotOpen2({ slot }: { slot: typeof models.SlotBase.infer }) {
+function SlotOpen2({
+  slot,
+  setRegisteringFor: setRegistration,
+}: {
+  slot: typeof models.SlotBase.infer;
+  setRegisteringFor: (reg: Registration) => void;
+}) {
   return (
     <div className="border h-12 rounded-md p-1 flex items-center gap-3">
       <div className="w-20 flex-none">
@@ -151,7 +167,9 @@ function SlotOpen2({ slot }: { slot: typeof models.SlotBase.infer }) {
         <button
           type="button"
           className="border rounded-sm w-fit px-1"
-          onClick={(e) => { }}
+          onClick={(_) => {
+            setRegistration({ slot_id: slot.id, list_id: slot.list_id });
+          }}
         >
           + register
         </button>
@@ -193,6 +211,8 @@ function MultiModeCard({
   // const tata = Object.entries(groupedslots).sort(([a], [b]) =>
   //   a.localeCompare(b),
   // );
+    // const groupedslots = groupSlotsByLocalStartDateSorted(list.slots);
+    // const tata = Object.entries(groupedslots).sort(([a], [b]) => a.localeCompare(b));
   const tata = useMemo(() => {
     const groupedslots = groupSlotsByLocalStartDateSorted(list.slots);
     return Object.entries(groupedslots).sort(([a], [b]) => a.localeCompare(b));
@@ -203,7 +223,7 @@ function MultiModeCard({
         {tata.map(([day, slots]) => (
           <div key={day}>
             <h3 className="">{day}</h3>
-            <SlotsGrid slots={slots} />
+            <SlotsGrid slots={slots} setRegisteringFor={setRegisteringFor} />
           </div>
         ))}
         <SingleWaitingListDetails
@@ -230,14 +250,20 @@ function MultiModeCard({
   }
 }
 
-function SlotsGrid({ slots }: { slots: Array<typeof models.SlotBase.infer> }) {
+function SlotsGrid({
+  slots,
+  setRegisteringFor,
+}: {
+  setRegisteringFor: (reg: Registration) => void;
+  slots: Array<typeof models.SlotBase.infer>;
+}) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 xl:grid-cols-5 gap-1">
       {slots.map((slot) => {
         if (slot.registered_client_name) {
           return <SlotTaken1 slot={slot} key={slot.id} />;
         } else {
-          return <SlotOpen2 slot={slot} key={slot.id} />;
+          return <SlotOpen2 slot={slot} key={slot.id} setRegisteringFor={setRegisteringFor} />;
         }
       })}
     </div>
