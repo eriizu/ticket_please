@@ -242,10 +242,14 @@ function SlotOpen2({
         <div className="tabular-nums text-xl">
           {absoluteTimeFormater.format(slot.starts_at)}
         </div>
-        <div className="text-green-800 text-xs font-mono">AVAILABLE</div>
+        {slot.starts_at > new Date() ? (
+          <div className="text-green-800 text-xs font-mono">AVAILABLE</div>
+        ) : (
+          <div className="text-red-800 text-xs font-mono">PAST</div>
+        )}
       </div>
       <div className="flex place-content-end w-full">
-        {setRegistration ? (
+        {setRegistration && slot.starts_at > new Date() ? (
           <button
             type="button"
             className='btn-secondary before:content-["+"] before:mr-1'
