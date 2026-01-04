@@ -4,7 +4,7 @@ import { useTokenValidation } from "@/hooks/useTokenValidation";
 
 export function TokenSumary() {
   return (
-    <div className="h-6 text-neutral-800">
+    <div className="text-neutral-800">
       <TokenSumaryInner />
     </div>
   );
@@ -42,7 +42,7 @@ function TokenSumaryInner() {
         can be pruned:
       </span>
       <button
-        className="border-b mx-1 hover:text-amber-600 "
+        className="underline mx-1 hover:text-amber-600 "
         type="button"
         onClick={handlePrune}
         disabled={pruneMutation.isPending}

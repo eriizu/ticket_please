@@ -1,3 +1,6 @@
+/** biome-ignore-all lint/a11y/noStaticElementInteractions: needed for a modal */
+/** biome-ignore-all lint/a11y/useButtonType: needed for a modal */
+/** biome-ignore-all lint/a11y/useKeyWithClickEvents: needed for a modal */
 import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -36,12 +39,9 @@ export function Modal({ isOpen, onClose, children, title }: ModalProps) {
     >
       <div
         ref={modalRef}
-        className="relative w-full max-w-md rounded-md bg-white p-6"
+        className="relative w-full max-w-md rounded-md bg-white p-4"
         onClick={(e) => e.stopPropagation()}
       >
-        {title && (
-          <h2 className="mb-4 text-xl font-semibold">{title}</h2>
-        )}
         <button
           onClick={onClose}
           className="absolute right-4 top-4 text-gray-400 hover:text-gray-600"

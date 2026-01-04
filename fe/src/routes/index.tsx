@@ -120,29 +120,38 @@ function RegisterModal(props: {
       onClose={props.onClose}
       title="Name for the registration?"
     >
-      <form onSubmit={onSubmit} className="flex gap-4 flex-col">
-        <div>
-          <label htmlFor="client_name">Name</label>
-          <input
-            ref={inputRef}
-            name="client_name"
-            className="ml-1 p-1 border-b"
-            type="text"
-            value={clientName}
-            onChange={(e) => setClientName(e.target.value)}
-            disabled={isPending}
-          />
-        </div>
-        <div>
+      <h2 className="mx-2 mb-4 text-xl font-semibold">Complete registration</h2>
+      <form onSubmit={onSubmit} className="flex flex-col gap-1">
+        <label htmlFor="client_name" className="text-sm font-bold mx-2">
+          Name
+        </label>
+        <input
+          ref={inputRef}
+          name="client_name"
+          className="mx-1 p-1 border rounded-md focus:outline-2 focus:border-white outline-pink-500"
+          type="text"
+          value={clientName}
+          onChange={(e) => setClientName(e.target.value)}
+          disabled={isPending}
+        />
+        <div className="flex">
           <button
             type="submit"
             disabled={isPending}
-            className="border rounded-md bg-green-200 hover:bg-green-300 disabled:bg-amber-200 px-1"
+            className="flex-1 border rounded-md bg-neutral-900 text-neutral-100 disabled:text-neural-600 disabled:bg-neutral-0 outline-pink-500 focus:outline-3 hover:outline-3 mt-3 mx-1 p-1"
           >
-            Confirm
+            Register
+          </button>
+          <button
+            onClick={() => props.onClose()}
+            type="button"
+            disabled={isPending}
+            className="flex-1 border rounded-md hover:bg-neutral-200 disabled:text-neutral-600 mt-3 mx-1 p-1"
+          >
+            Cancel
           </button>
         </div>
-        <div>Status: {status}</div>
+        <div className="mx-2">Status: {status}</div>
       </form>
     </Modal>
   );
@@ -211,8 +220,8 @@ function MultiModeCard({
   // const tata = Object.entries(groupedslots).sort(([a], [b]) =>
   //   a.localeCompare(b),
   // );
-    // const groupedslots = groupSlotsByLocalStartDateSorted(list.slots);
-    // const tata = Object.entries(groupedslots).sort(([a], [b]) => a.localeCompare(b));
+  // const groupedslots = groupSlotsByLocalStartDateSorted(list.slots);
+  // const tata = Object.entries(groupedslots).sort(([a], [b]) => a.localeCompare(b));
   const tata = useMemo(() => {
     const groupedslots = groupSlotsByLocalStartDateSorted(list.slots);
     return Object.entries(groupedslots).sort(([a], [b]) => a.localeCompare(b));
@@ -263,7 +272,13 @@ function SlotsGrid({
         if (slot.registered_client_name) {
           return <SlotTaken1 slot={slot} key={slot.id} />;
         } else {
-          return <SlotOpen2 slot={slot} key={slot.id} setRegisteringFor={setRegisteringFor} />;
+          return (
+            <SlotOpen2
+              slot={slot}
+              key={slot.id}
+              setRegisteringFor={setRegisteringFor}
+            />
+          );
         }
       })}
     </div>
