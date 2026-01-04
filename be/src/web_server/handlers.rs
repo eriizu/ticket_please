@@ -1,3 +1,5 @@
+use crate::db::WaitingTokenCriteria;
+
 use super::{ArcRepo, HandlerError, dto::*};
 use chrono::{Duration, prelude::*};
 use poem::web::{Data, Json, Path, Query};
@@ -293,4 +295,21 @@ pub async fn slots_generate_on_waiting_list(
         n_generated += 1;
     }
     Ok(poem::http::StatusCode::NO_CONTENT)
+}
+#[poem::handler]
+pub async fn slot_get(
+    Path(id): Path<i32>,
+    Data(repo): Data<&ArcRepo>,
+) -> Result<Json<SlotWithRelatedDto>, HandlerError> {
+    let slot = repo.get_slot_by_id_with_wtoken_id(id).await?;
+    let list = repo.get_waiting_list_by_id(slot.wlist_id).await?;
+    let token = if let Some(wtoken_id) = slot.wtoken_id {
+        Some(
+            repo.get_waiting_token(WaitingTokenCriteria::Id(wtoken_id))
+                .await?,
+        )
+    } else {
+        None
+    };
+    Ok(Json((slot.into(), list, token).into()))
 }

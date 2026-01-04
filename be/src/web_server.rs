@@ -115,6 +115,7 @@ pub async fn start(repo: Arc<crate::db::Repository>) -> anyhow::Result<()> {
                 .patch(waiting_token_edit_as_client)
                 .delete(waiting_token_delete),
         )
+        .at("/slot/:id", get(slot_get))
         .data(repo)
         .with(poem::middleware::Tracing)
         .with(poem::middleware::RequestId::default());

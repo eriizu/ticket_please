@@ -244,24 +244,35 @@ impl std::convert::From<crate::db::Slot> for SlotBaseDto {
     }
 }
 
+impl std::convert::From<crate::db::SlotWithTokenId> for SlotBaseDto {
+    fn from(value: crate::db::SlotWithTokenId) -> Self {
+        Self {
+            id: value.slot_id,
+            list_id: value.wlist_id,
+            starts_at: value.slot_starts_at,
+            ends_at: value.slot_ends_at,
+        }
+    }
+}
+
 impl
     std::convert::From<(
         crate::db::Slot,
         crate::db::WaitingList,
-        crate::db::WaitingToken,
+        Option<crate::db::WaitingToken>,
     )> for SlotWithRelatedDto
 {
     fn from(
         value: (
             crate::db::Slot,
             crate::db::WaitingList,
-            crate::db::WaitingToken,
+            Option<crate::db::WaitingToken>,
         ),
     ) -> Self {
         Self {
             base: value.0.into(),
             list: value.1.into(),
-            token: Some(value.2.into()),
+            token: value.2.map(|x| x.into()),
         }
     }
 }

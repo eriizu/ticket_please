@@ -11,6 +11,26 @@ pub struct Slot {
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, sqlx::FromRow)]
+pub struct SlotWithTokenId {
+    pub slot_id: i32,
+    pub slot_starts_at: DateTime<FixedOffset>,
+    pub slot_ends_at: DateTime<FixedOffset>,
+    pub wlist_id: i32,
+    pub wtoken_id: Option<i32>,
+}
+
+impl std::convert::Into<Slot> for SlotWithTokenId {
+    fn into(self) -> Slot {
+        Slot {
+            slot_id: self.slot_id,
+            slot_starts_at: self.slot_starts_at,
+            slot_ends_at: self.slot_ends_at,
+            wlist_id: self.wlist_id,
+        }
+    }
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug, sqlx::FromRow)]
 pub struct PartialSlot {
     pub slot_starts_at: Option<DateTime<FixedOffset>>,
     pub slot_ends_at: Option<DateTime<FixedOffset>>,
@@ -21,7 +41,9 @@ impl Repository {
     #[instrument(skip(self), err, ret)]
     pub async fn get_slot_by_id(&self, id: i32) -> Result<Slot, RepoError> {
         let slot = sqlx::query_as(
-            "select slot_id, slot_starts_at, slot_ends_at, wlist_id from slot where slot_id = $1",
+            r#"select slot_id, slot_starts_at, slot_ends_at, wlist_id
+from slot
+where slot_id = $1"#,
         )
         .bind(id)
         .fetch_one(&self.pool)
@@ -29,6 +51,28 @@ impl Repository {
         .map_err(|e| RepoError::Sqlx {
             error: e,
             context: "get_slot_by_id",
+        })?;
+        Ok(slot)
+    }
+
+    #[instrument(skip(self), err, ret)]
+    pub async fn get_slot_by_id_with_wtoken_id(
+        &self,
+        id: i32,
+    ) -> Result<SlotWithTokenId, RepoError> {
+        let slot = sqlx::query_as(
+            r#"
+select slot_id, slot_starts_at, slot_ends_at, slot.wlist_id, wtoken_id
+from slot
+left join waiting_token using(slot_id)
+where slot_id = $1"#,
+        )
+        .bind(id)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|e| RepoError::Sqlx {
+            error: e,
+            context: "get_slot_by_id_with_token_id",
         })?;
         Ok(slot)
     }
