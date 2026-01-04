@@ -46,7 +46,6 @@ function ManyWaitingList() {
       out.forEach((slit) => {
         models.matchSlotsToTokens(slit.slots, slit.tokens);
       });
-      console.log(out);
       return out;
     },
   });
@@ -61,20 +60,18 @@ function ManyWaitingList() {
   return (
     <div className="flex flex-col gap-4 ">
       {data.map((e) => (
-        <>
-          <SingleWaitingList
-            key={e.id}
-            list={e}
-            setRegisteringFor={setRegisteringFor}
-          />
-          {registeringFor && (
-            <RegisterModal
-              onClose={() => setRegisteringFor(null)}
-              registeringFor={registeringFor}
-            />
-          )}
-        </>
+        <SingleWaitingList
+          key={e.id}
+          list={e}
+          setRegisteringFor={setRegisteringFor}
+        />
       ))}
+      {registeringFor && (
+        <RegisterModal
+          onClose={() => setRegisteringFor(null)}
+          registeringFor={registeringFor}
+        />
+      )}
     </div>
   );
 }
@@ -92,6 +89,7 @@ function RegisterModal(props: {
 
   const [storage, setStorage] = usePersistent();
   const [clientName, setClientName] = useState(storage.last_used_name || "");
+  const [unavailable, setUnavailable] = useState(false);
 
   const {
     isPending,
@@ -105,17 +103,16 @@ function RegisterModal(props: {
     storage,
     setStorage,
   );
-
-  const onSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    registerOnList(clientName);
-  };
-
   useEffect(() => {
     if (status === "success") {
       props.onClose();
     }
   }, [status, props.onClose]);
+
+  const onSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    registerOnList(clientName);
+  };
 
   return (
     <Modal
@@ -124,6 +121,23 @@ function RegisterModal(props: {
       title="Name for the registration?"
     >
       <h2 className="mx-2 mb-4 text-xl font-semibold">Complete registration</h2>
+      <div className="mx-1 my-3">
+        {props.registeringFor.slot_id ? (
+          <SlotAvailability
+            slot_id={props.registeringFor.slot_id}
+            setUnvailable={(x) => {
+              setUnavailable(x);
+              setTimeout(props.onClose, 5000);
+            }}
+          />
+        ) : (
+          <SlotBase>
+            <div className="w-full text-center text-neutral-700">
+              No slot selected.
+            </div>
+          </SlotBase>
+        )}
+      </div>
       <form onSubmit={onSubmit} className="flex flex-col gap-1">
         <label htmlFor="client_name" className="text-sm font-bold mx-2">
           Name
@@ -135,12 +149,12 @@ function RegisterModal(props: {
           type="text"
           value={clientName}
           onChange={(e) => setClientName(e.target.value)}
-          disabled={isPending}
+          disabled={isPending || unavailable}
         />
         <div className="flex gap-1 mx-1">
           <button
             type="submit"
-            disabled={isPending}
+            disabled={isPending || unavailable}
             className="flex-1 btn-primary mt-3 py-1"
           >
             Register
@@ -160,15 +174,70 @@ function RegisterModal(props: {
   );
 }
 
+function SlotAvailability(props: {
+  slot_id: number;
+  setUnvailable: (x: boolean) => void;
+}) {
+  const { data, isPending, error } = useQuery({
+    queryKey: ["list", "slot", props.slot_id],
+    refetchInterval: 1000,
+    retry: 3,
+    queryFn: async () =>
+      await (await fetch(`/api/slot/${props.slot_id}`)).json(),
+    select: (raw) => {
+      console.log(raw);
+      const parsed = models.SlotRelated(raw);
+      if (parsed instanceof type.errors) {
+        console.error(parsed);
+        throw parsed;
+      }
+      return parsed;
+    },
+  });
+  if (isPending) {
+    return (
+      <SlotBase>
+        <div className="w-full text-center text-neutral-700">
+          Loading slot #{props.slot_id}...
+        </div>
+      </SlotBase>
+    );
+  }
+  if (error) {
+    return (
+      <SlotBase>
+        <div className="w-full text-center text-neutral-700">
+          Failed to load slot #{props.slot_id}.
+        </div>
+      </SlotBase>
+    );
+  }
+  if (data?.token) {
+    props.setUnvailable(true);
+    data.registered_token_id = data.token.id;
+    data.registered_client_name = data.token.client_name || undefined;
+    return <SlotTaken1 slot={data} />;
+  }
+  if (data) return <SlotOpen2 slot={data} />;
+}
+
+function SlotBase(props: { children: React.ReactNode }) {
+  return (
+    <div className="border h-12 rounded-md p-1 flex items-center gap-3">
+      {props.children}
+    </div>
+  );
+}
+
 function SlotOpen2({
   slot,
   setRegisteringFor: setRegistration,
 }: {
   slot: typeof models.SlotBase.infer;
-  setRegisteringFor: (reg: Registration) => void;
+  setRegisteringFor?: (reg: Registration) => void;
 }) {
   return (
-    <div className="border h-12 rounded-md p-1 flex items-center gap-3">
+    <SlotBase>
       <div className="w-20 flex-none">
         <div className="tabular-nums text-xl">
           {absoluteTimeFormater.format(slot.starts_at)}
@@ -176,36 +245,40 @@ function SlotOpen2({
         <div className="text-green-800 text-xs font-mono">AVAILABLE</div>
       </div>
       <div className="flex place-content-end w-full">
-        <button
-          type="button"
-          className='btn-secondary before:content-["+"] before:mr-1'
-          onClick={(_) => {
-            setRegistration({ slot_id: slot.id, list_id: slot.list_id });
-          }}
-        >
-          register
-        </button>
+        {setRegistration ? (
+          <button
+            type="button"
+            className='btn-secondary before:content-["+"] before:mr-1'
+            onClick={(_) => {
+              setRegistration({ slot_id: slot.id, list_id: slot.list_id });
+            }}
+          >
+            register
+          </button>
+        ) : null}
       </div>
-    </div>
+    </SlotBase>
   );
 }
 
 function SlotTaken1({ slot }: { slot: typeof models.SlotBase.infer }) {
   return (
-    <div className="border h-12 rounded-md p-1 flex items-center gap-3 text-neutral-700">
-      <div className="flex-none">
-        <div className="tabular-nums text-xl">
-          {absoluteTimeFormater.format(slot.starts_at)}
+    <div className="text-neutral-700">
+      <SlotBase>
+        <div className="flex-none">
+          <div className="tabular-nums text-xl">
+            {absoluteTimeFormater.format(slot.starts_at)}
+          </div>
+          <div className="text-red-800 text-xs font-mono w-fit">NOT AVAIL.</div>
         </div>
-        <div className="text-red-800 text-xs font-mono w-fit">NOT AVAIL.</div>
-      </div>
-      <div className="align-bottom">
-        {/* <div className="text-red-800">:: not avail. ::</div>*/}
-        <div className="whitespace-nowrap overflow-hidden text-ellipsis text-xs">
-          {slot.registered_client_name}
+        <div className="align-bottom">
+          {/* <div className="text-red-800">:: not avail. ::</div>*/}
+          <div className="whitespace-nowrap overflow-hidden text-ellipsis text-xs">
+            {slot.registered_client_name}
+          </div>
+          <div className="text-xs">is currently registered</div>
         </div>
-        <div className="text-xs">is currently registered</div>
-      </div>
+      </SlotBase>
     </div>
   );
 }
@@ -226,13 +299,13 @@ function SingleWaitingList({
       <div>
         <h3 className="font-semibold">Next in line, not in a slot</h3>
         <ol className="">
-            <button
-              type="button"
-              className="before:content-['→'] before:mr-1 btn-secondary"
-              onClick={() => setRegisteringFor({ list_id: list.id })}
-            >
-              take a ticket
-            </button>
+          <button
+            type="button"
+            className="before:content-['→'] before:mr-1 btn-secondary"
+            onClick={() => setRegisteringFor({ list_id: list.id })}
+          >
+            take a ticket
+          </button>
           {list.tokens
             .filter(
               (token) =>

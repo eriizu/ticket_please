@@ -27,6 +27,11 @@ export const WaitingListBase = type({
   opens_at: "string.date.parse | null",
 });
 
+export const SlotRelated = SlotBase.merge({
+  list: WaitingListBase,
+  token: WaitingTokenBase.or("null")
+});
+
 export const WaitingListRelated = WaitingListBase.merge({
   slots: SlotBase.array(),
   tokens: WaitingTokenBase.array(),
@@ -52,7 +57,6 @@ export function matchSlotsToTokens(
   });
 }
 
-// TODO: invalidation when list doesn't exist or when removing the token
 export const KnownToken = type({
   id: "number",
   list_id: "number",
@@ -113,7 +117,6 @@ export class PersistentStorage {
     this.known_tokens = with_res
       .filter(({ res }) => res.status !== 404)
       .map(({ token }) => token);
-    // TODO: ensure that after this, localstorage is updated
   }
 
   removeTokens(tokenIds: number[]) {
