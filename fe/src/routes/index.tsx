@@ -1,11 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
-import * as models from "../models";
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { groupSlotsByLocalStartDateSorted } from "../utils/slots";
 import { useIsFetching, useQuery } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
 import { type } from "arktype";
-import { RegisterModal } from "@/components/RegisterModal";
-import { SlotTaken1, SlotOpen2, SlotMine } from "@/components/Slot";
+import { useEffect, useMemo, useState } from "react";
+import { RegisterModal, type Registration } from "@/components/RegisterModal";
+import { SlotMine, SlotOpen2, SlotTaken1 } from "@/components/Slot";
+import * as models from "../models";
+import { groupSlotsByLocalStartDateSorted } from "../utils/slots";
 
 export const Route = createFileRoute("/")({
   component: App,
@@ -25,11 +25,6 @@ function App() {
     </>
   );
 }
-
-type Registration = {
-  list_id: number;
-  slot_id?: number;
-};
 
 function ManyWaitingList() {
   const { data, isPending, error } = useQuery({
@@ -186,7 +181,7 @@ function SingleWaitingListTitle({
       <div>
         <div className="text-2xl">{list.name}</div>
         <div className="text-neutral-800 text-sm">
-          <OpenedTimeWindow
+          <OpenedTimeInterval
             start={list.opens_at}
             end={list.closes_at}
             start_verb="opens"
@@ -233,7 +228,7 @@ function SingleWaitingListDetails({
   );
 }
 
-function OpenedTimeWindow(props: {
+function OpenedTimeInterval(props: {
   start: Date | null;
   end: Date | null;
   start_verb: string;
@@ -299,12 +294,12 @@ const absoluteDateFormater = Intl.DateTimeFormat("en-IE", {
   dateStyle: "full",
 });
 
-import {
-  formatRelativeTime,
-  type FormatRelativeTimeOptions,
-} from "../utils/date";
 import { TokenSumary } from "@/components/TokenSumary";
 import { usePersistent } from "@/hooks/usePersistent";
+import {
+  type FormatRelativeTimeOptions,
+  formatRelativeTime,
+} from "../utils/date";
 
 function DateInWaitingList({
   fieldName,
