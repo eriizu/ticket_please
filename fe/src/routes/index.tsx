@@ -232,9 +232,22 @@ function MultiModeCard({
   if (mode === "wl") {
     return (
       <SingleWaitingListTitle list={list}>
+        <div>
+          <h3 className="font-semibold">Next in line, not in a slot</h3>
+          <ol className=''>
+          {list.tokens
+            .filter((token) => !token.slot_id)
+            .map((token) => (
+              <li className="not-last:mb-0.5 before:content-['—'] before:mr-1" key={token.id}>
+                {token.client_name}
+                <span className="text-neutral-600 text-sm ml-1">#{token.id}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
         {tata.map(([day, slots]) => (
           <div key={day}>
-            <h3 className="">{day}</h3>
+            <h3 className="font-semibold">{day}</h3>
             <SlotsGrid slots={slots} setRegisteringFor={setRegisteringFor} />
           </div>
         ))}
@@ -332,36 +345,15 @@ function SingleWaitingListDetails({
     <>
       <div className="grid grid-cols-2 gap-4 items-baseline w-fit">
         <BlockyCounter
-          fieldName={{ singular: "person waiting", other: "people waiting" }}
+          fieldName={{
+            singular: "person waiting not slotted",
+            other: "people waiting not slotted",
+          }}
           value={list.tokens.filter((token) => !token.slot_id).length}
         />
         <button type="button" onClick={() => register()}>
           → take a ticket
         </button>
-        <BlockyCounter
-          fieldName={{ singular: "person slotted", other: "people slotted" }}
-          value={
-            list.tokens.filter(
-              (token) =>
-                token.slot_id &&
-                (!token.real_turn_time || token.real_turn_time > now),
-            ).length
-          }
-        />
-        <div></div>
-        <BlockyCounter
-          fieldName={{ singular: "available slot", other: "available slots" }}
-          value={
-            list.slots.filter(
-              (slot) => !slot.registered_token_id && slot.starts_at > now,
-            ).length
-          }
-        />
-        <button type="button">→ take a slot</button>
-        <BlockyCounter
-          fieldName={{ singular: "unique slot", other: "total slots" }}
-          value={list.slots.length}
-        />
       </div>
       <div className="flex gap-4 items-baseline"></div>
     </>
