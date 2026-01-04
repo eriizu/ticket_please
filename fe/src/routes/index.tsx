@@ -33,6 +33,8 @@ type Registration = {
 function ManyWaitingList() {
   const { data, isPending, error } = useQuery({
     queryKey: ["list"],
+    staleTime: 10 * 1000,
+    refetchInterval: 10 * 1000,
     queryFn: async () => fetch("/api/list?open=true").then((r) => r.json()),
     select: (raw) => {
       const out = models.WaitingListRelated.array()(raw);
