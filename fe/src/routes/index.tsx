@@ -59,10 +59,10 @@ function ManyWaitingList() {
   if (error) return <span>Oops!</span>;
 
   return (
-    <div className="flex flex-col gap-4 [&_button]:bg-neutral-200 [&_button:hover]:bg-neutral-300">
+    <div className="flex flex-col gap-4 ">
       {data.map((e) => (
         <>
-          <MultiModeCard
+          <SingleWaitingList
             key={e.id}
             list={e}
             setRegisteringFor={setRegisteringFor}
@@ -137,11 +137,11 @@ function RegisterModal(props: {
           onChange={(e) => setClientName(e.target.value)}
           disabled={isPending}
         />
-        <div className="flex">
+        <div className="flex gap-1 mx-1">
           <button
             type="submit"
             disabled={isPending}
-            className="flex-1 border rounded-md bg-neutral-900 text-neutral-100 disabled:text-neural-600 disabled:bg-neutral-0 outline-pink-500 focus:outline-3 hover:outline-3 mt-3 mx-1 p-1"
+            className="flex-1 btn-primary mt-3 py-1"
           >
             Register
           </button>
@@ -149,7 +149,7 @@ function RegisterModal(props: {
             onClick={() => props.onClose()}
             type="button"
             disabled={isPending}
-            className="flex-1 border rounded-md hover:bg-neutral-200 outline-pink-500 focus:outline-3 hover:outline-3 hover:border-white focus:border-white disabled:text-neutral-600 mt-3 mx-1 p-1"
+            className="flex-1 btn-secondary mt-3 py-1"
           >
             Cancel
           </button>
@@ -178,12 +178,12 @@ function SlotOpen2({
       <div className="flex place-content-end w-full">
         <button
           type="button"
-          className="border rounded-sm w-fit px-1"
+          className='btn-secondary before:content-["+"] before:mr-1'
           onClick={(_) => {
             setRegistration({ slot_id: slot.id, list_id: slot.list_id });
           }}
         >
-          + register
+          register
         </button>
       </div>
     </div>
@@ -210,69 +210,56 @@ function SlotTaken1({ slot }: { slot: typeof models.SlotBase.infer }) {
   );
 }
 
-type Mode = "wl" | "register" | "select_slot";
-function MultiModeCard({
+function SingleWaitingList({
   list,
   setRegisteringFor,
 }: {
   list: typeof models.WaitingListRelated.infer;
   setRegisteringFor: (reg: Registration) => void;
 }) {
-  const [mode, setMode] = useState<Mode>("wl");
-  // const groupedslots = groupSlotsByLocalStartDateSorted(list.slots);
-  // const tata = Object.entries(groupedslots).sort(([a], [b]) =>
-  //   a.localeCompare(b),
-  // );
-  // const groupedslots = groupSlotsByLocalStartDateSorted(list.slots);
-  // const tata = Object.entries(groupedslots).sort(([a], [b]) => a.localeCompare(b));
   const tata = useMemo(() => {
     const groupedslots = groupSlotsByLocalStartDateSorted(list.slots);
     return Object.entries(groupedslots).sort(([a], [b]) => a.localeCompare(b));
   }, [list.slots]);
-  if (mode === "wl") {
-    return (
-      <SingleWaitingListTitle list={list}>
-        <div>
-          <h3 className="font-semibold">Next in line, not in a slot</h3>
-          <ol className=''>
+  return (
+    <SingleWaitingListTitle list={list}>
+      <div>
+        <h3 className="font-semibold">Next in line, not in a slot</h3>
+        <ol className="">
+            <button
+              type="button"
+              className="before:content-['→'] before:mr-1 btn-secondary"
+              onClick={() => setRegisteringFor({ list_id: list.id })}
+            >
+              take a ticket
+            </button>
           {list.tokens
-            .filter((token) => !token.slot_id)
+            .filter(
+              (token) =>
+                !token.slot_id &&
+                (!token.real_turn_time || token.real_turn_time > new Date()),
+            )
             .map((token) => (
-              <li className="not-last:mb-0.5 before:content-['—'] before:mr-1" key={token.id}>
+              <li
+                className="not-last:mb-0.5 before:content-['—'] before:mr-1"
+                key={token.id}
+              >
                 {token.client_name}
-                <span className="text-neutral-600 text-sm ml-1">#{token.id}</span>
+                <span className="text-neutral-600 text-sm ml-1">
+                  #{token.id}
+                </span>
               </li>
             ))}
-          </ol>
+        </ol>
+      </div>
+      {tata.map(([day, slots]) => (
+        <div key={day}>
+          <h3 className="font-semibold">{day}</h3>
+          <SlotsGrid slots={slots} setRegisteringFor={setRegisteringFor} />
         </div>
-        {tata.map(([day, slots]) => (
-          <div key={day}>
-            <h3 className="font-semibold">{day}</h3>
-            <SlotsGrid slots={slots} setRegisteringFor={setRegisteringFor} />
-          </div>
-        ))}
-        <SingleWaitingListDetails
-          list={list}
-          register={() => setRegisteringFor({ list_id: list.id })}
-        />
-      </SingleWaitingListTitle>
-    );
-  } else if (mode === "register") {
-    return (
-      <SingleWaitingListTitle list={list}>
-        <button
-          className="w-fit"
-          type="button"
-          onClick={(_) => {
-            setMode("wl");
-          }}
-        >
-          back{" "}
-        </button>
-      </SingleWaitingListTitle>
-    );
-  } else {
-  }
+      ))}
+    </SingleWaitingListTitle>
+  );
 }
 
 function SlotsGrid({

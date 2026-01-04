@@ -2,8 +2,8 @@
 
 body {
   @apply m-0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
-    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+  font-family: "Cantarell", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+    "Ubuntu", "Fira Sans", "Droid Sans", "Helvetica Neue",
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -12,4 +12,18 @@ body {
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
     monospace;
+}
+
+@layer components {
+  .btn-primary, .btn-secondary {
+    @apply border border-black rounded-md outline-pink-500 focus:outline-3 focus:border-white hover:outline-3 hover:border-white px-1;
+  }
+
+  .btn-primary {
+    @apply bg-neutral-900 text-neutral-200 disabled:text-neutral-400 disabled:bg-neutral-800;
+  }
+
+  .btn-secondary {
+    @apply bg-neutral-100 disabled:text-neutral-700;
+  }
 }
