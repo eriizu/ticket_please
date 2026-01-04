@@ -149,6 +149,12 @@ pub async fn waiting_token_create(
                 context: "checking slot is part of waiting list",
             })?;
         }
+        let now = Utc::now();
+        if slot.slot_starts_at < now {
+            Err(HandlerError::Discrepancy {
+                context: "slot is in the past",
+            })?;
+        }
         est_turn_time = Some(slot.slot_starts_at);
         Some(slot)
     } else {
