@@ -33,8 +33,9 @@ type Registration = {
 function ManyWaitingList() {
   const { data, isPending, error } = useQuery({
     queryKey: ["list"],
-    staleTime: 10 * 1000,
+    staleTime: 5 * 1000,
     refetchInterval: 10 * 1000,
+    retry: 3,
     queryFn: async () => fetch("/api/list?open=true").then((r) => r.json()),
     select: (raw) => {
       const out = models.WaitingListRelated.array()(raw);
@@ -148,7 +149,7 @@ function RegisterModal(props: {
             onClick={() => props.onClose()}
             type="button"
             disabled={isPending}
-            className="flex-1 border rounded-md hover:bg-neutral-200 disabled:text-neutral-600 mt-3 mx-1 p-1"
+            className="flex-1 border rounded-md hover:bg-neutral-200 outline-pink-500 focus:outline-3 hover:outline-3 hover:border-white focus:border-white disabled:text-neutral-600 mt-3 mx-1 p-1"
           >
             Cancel
           </button>

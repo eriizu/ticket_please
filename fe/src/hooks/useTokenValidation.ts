@@ -4,7 +4,7 @@ import type * as models from "../models";
 export function useTokenValidation(tokens: (typeof models.KnownToken.infer)[]) {
   const results = useQueries({
     queries: tokens.map((token) => ({
-      queryKey: ['token-validation', token.id, token.secret],
+      queryKey: ['list', 'token-validation', token.id, token.secret],
       queryFn: async () => {
         const res = await fetch(`/api/token/${token.secret}`);
         return {
