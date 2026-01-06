@@ -1,8 +1,8 @@
 /** biome-ignore-all lint/a11y/noStaticElementInteractions: needed for a modal */
 /** biome-ignore-all lint/a11y/useButtonType: needed for a modal */
 /** biome-ignore-all lint/a11y/useKeyWithClickEvents: needed for a modal */
-import { useEffect, useRef } from 'react';
-import { createPortal } from 'react-dom';
+import { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 
 interface ModalProps {
   isOpen: boolean;
@@ -16,17 +16,17 @@ export function Modal({ isOpen, onClose, children }: ModalProps) {
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === "Escape") onClose();
     };
 
     if (isOpen) {
-      document.addEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'hidden';
+      document.addEventListener("keydown", handleEscape);
+      document.body.style.overflow = "hidden";
     }
 
     return () => {
-      document.removeEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'unset';
+      document.removeEventListener("keydown", handleEscape);
+      document.body.style.overflow = "unset";
     };
   }, [isOpen, onClose]);
 
@@ -51,6 +51,6 @@ export function Modal({ isOpen, onClose, children }: ModalProps) {
         {children}
       </div>
     </div>,
-    document.body
+    document.body,
   );
 }

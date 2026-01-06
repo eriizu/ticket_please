@@ -28,9 +28,7 @@ export function groupSlotsByLocalStartDateSorted(slots: Slot[]) {
   const grouped = groupSlotsByLocalStartDate(slots);
 
   for (const key of Object.keys(grouped)) {
-    grouped[key].sort(
-      (a, b) => a.starts_at.getTime() - b.starts_at.getTime(),
-    );
+    grouped[key].sort((a, b) => a.starts_at.getTime() - b.starts_at.getTime());
   }
 
   // Keys are YYYY-MM-DD, so lexicographic sort == chronological sort

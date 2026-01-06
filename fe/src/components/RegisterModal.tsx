@@ -5,7 +5,7 @@ import { usePersistent } from "@/hooks/usePersistent";
 import { useRegisterOnList } from "@/hooks/useRegisterOnList";
 import { Modal } from "../components/Modal";
 import * as models from "../models";
-import { SlotBase, SlotOpen2, SlotTaken1 } from "./Slot";
+import { Slot, SlotBase } from "./Slot";
 
 export type Registration = {
   list_id: number;
@@ -152,7 +152,7 @@ function SlotAvailability(props: {
     props.setUnvailable(true);
     data.registered_token_id = data.token.id;
     data.registered_client_name = data.token.client_name || undefined;
-    return <SlotTaken1 slot={data} />;
+    return <Slot slot={data} variant="taken" />;
   }
-  if (data) return <SlotOpen2 slot={data} registered_somewhere_else={false} />;
+  if (data) return <Slot slot={data} variant="open" />;
 }

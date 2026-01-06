@@ -29,7 +29,7 @@ export const WaitingListBase = type({
 
 export const SlotRelated = SlotBase.merge({
   list: WaitingListBase,
-  token: WaitingTokenBase.or("null")
+  token: WaitingTokenBase.or("null"),
 });
 
 export const WaitingListRelated = WaitingListBase.merge({
@@ -73,7 +73,10 @@ export class PersistentStorage {
   known_tokens: (typeof KnownToken.infer)[];
   last_used_name: string | null;
 
-  constructor(known_tokens: typeof KnownToken.infer[], last_used_name: string | null) {
+  constructor(
+    known_tokens: (typeof KnownToken.infer)[],
+    last_used_name: string | null,
+  ) {
     this.known_tokens = known_tokens;
     this.last_used_name = last_used_name;
   }

@@ -11,7 +11,9 @@ export default function Header() {
       <h1 className="text-xl flex-none font-semibold">
         <Link to="/">Ticket Please</Link>
       </h1>
-      <p className="text-sm text-neutral-800">Waiting list and slot managment system</p>
+      <p className="text-sm text-neutral-800">
+        Waiting list and slot managment system
+      </p>
     </header>
   );
 }

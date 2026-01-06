@@ -8,4 +8,3 @@ export const Route = createFileRoute("/prune")({
 function TokenManager() {
   return <TokenSumary />;
 }
-

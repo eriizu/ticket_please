@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { type } from "arktype";
 import { useEffect, useMemo, useState } from "react";
 import { RegisterModal, type Registration } from "@/components/RegisterModal";
-import { SlotMine, SlotOpen2, SlotTaken1 } from "@/components/Slot";
+import { Slot, getSlotVariant } from "@/components/Slot";
 import * as models from "../models";
 import { groupSlotsByLocalStartDateSorted } from "../utils/slots";
 
@@ -150,20 +150,15 @@ function SlotsGrid({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 xl:grid-cols-5 gap-1">
       {slots.map((slot) => {
-        if (registered_on_slot_ids.some((item) => item === slot.id)) {
-          return <SlotMine slot={slot} key={slot.id} />;
-        } else if (slot.registered_client_name) {
-          return <SlotTaken1 slot={slot} key={slot.id} />;
-        } else {
-          return (
-            <SlotOpen2
-              slot={slot}
-              key={slot.id}
-              setRegisteringFor={setRegisteringFor}
-              registered_somewhere_else={!!registered_on_slot_ids.length}
-            />
-          );
-        }
+        const variant = getSlotVariant(slot, registered_on_slot_ids);
+        return (
+          <Slot
+            key={slot.id}
+            slot={slot}
+            variant={variant}
+            onRegister={variant === "open" ? setRegisteringFor : undefined}
+          />
+        );
       })}
     </div>
   );

@@ -7,7 +7,6 @@ const KNOWN_TOKENS_EXAMPLE: (typeof models.KnownToken.infer)[] = [
   { id: 3, slot_id: null, list_id: 27, secret: "riri" },
 ];
 
-
 export function usePersistent() {
   return useLocalStorage(
     "persistent",

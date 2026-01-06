@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 const CUSTOM_STORAGE_EVENT = "local-storage-update";
-type CustomStorageEvent = CustomEvent<{key: string, newValue: string}>;
+type CustomStorageEvent = CustomEvent<{ key: string; newValue: string }>;
 
 declare global {
   interface WindowEventMap {

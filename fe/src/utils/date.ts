@@ -33,9 +33,14 @@ function toNowMs(now: Date | number): number {
  */
 export function formatRelativeTime(
   input: Date | number | string,
-  options: FormatRelativeTimeOptions = {}
+  options: FormatRelativeTimeOptions = {},
 ): string {
-  const { locale, style = "long", numeric = "auto", now = Date.now() } = options;
+  const {
+    locale,
+    style = "long",
+    numeric = "auto",
+    now = Date.now(),
+  } = options;
 
   const date = toDate(input);
   const diffMs = date.getTime() - toNowMs(now);

@@ -1,9 +1,12 @@
 // hooks/usePruneTokens.ts
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useLocalStorage} from '@/hooks/localStorage';
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocalStorage } from "@/hooks/localStorage";
 import * as models from "../models";
 
-export function usePruneTokens(storage: models.PersistentStorage, setStorage: (val: models.PersistentStorage) => void) {
+export function usePruneTokens(
+  storage: models.PersistentStorage,
+  setStorage: (val: models.PersistentStorage) => void,
+) {
   const queryClient = useQueryClient();
   // const [persistent, setPersistent] = useLocalStorage("persistent", new models.PersistentStorage({}));
 
@@ -31,12 +34,12 @@ export function usePruneTokens(storage: models.PersistentStorage, setStorage: (v
     },
     onSuccess: (invalidIds) => {
       invalidIds.forEach((id) => {
-        queryClient.invalidateQueries({ queryKey: ['token', id] });
+        queryClient.invalidateQueries({ queryKey: ["token", id] });
       });
 
       // Save to localStorage
       storage.removeTokens(invalidIds);
-      setStorage(storage)
+      setStorage(storage);
     },
   });
 }
