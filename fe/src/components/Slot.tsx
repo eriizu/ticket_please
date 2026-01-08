@@ -57,18 +57,61 @@ interface SlotProps {
   slot: typeof models.SlotBase.infer;
   variant: SlotVariant;
   onRegister?: (reg: Registration) => void;
+  onUnregister?: () => void;
+  isUnregistering?: boolean;
 }
 
-export function Slot({ slot, variant, onRegister }: SlotProps) {
+export function Slot({
+  slot,
+  variant,
+  onRegister,
+  onUnregister,
+  isUnregistering,
+}: SlotProps) {
   const status = getStatusDisplay(variant, slot.starts_at);
   const isPast = slot.starts_at <= new Date();
   const canRegister = variant === "open" && !isPast && onRegister;
 
-  // Taken and Mine variants show the registered client info
-  if (variant === "taken" || variant === "mine") {
-    const wrapper = variant === "taken" ? "text-neutral-700" : "";
+  // Mine variant - clickable to unregister
+  if (variant === "mine") {
     return (
-      <div className={wrapper}>
+      <button
+        type="button"
+        onClick={onUnregister}
+        disabled={isUnregistering}
+        className="group w-full text-left cursor-pointer disabled:cursor-wait"
+      >
+        <SlotBase>
+          <div className="flex-none group-hover:hidden">
+            <div className="tabular-nums text-xl">
+              {absoluteTimeFormatter.format(slot.starts_at)}
+            </div>
+            <div className={`${status.colorClass} text-xs font-mono w-fit`}>
+              {status.text}
+            </div>
+          </div>
+          <div className="align-bottom group-hover:hidden">
+            <div className="whitespace-nowrap overflow-hidden text-ellipsis text-xs">
+              {slot.registered_client_name}
+            </div>
+            <div className="text-xs">
+              <span className="font-semibold">this is your slot</span>
+            </div>
+          </div>
+          {onUnregister ? (
+            <div className="hidden group-hover:flex w-full items-center justify-center text-neutral-600">
+              {isUnregistering ? "unregistering..." : "click to unregister"}
+            </div>
+          ) : null}
+        </SlotBase>
+      </button>
+    );
+  }
+
+  // Taken variant
+  if (variant === "taken") {
+    return (
+      <div className="text-neutral-700">
         <SlotBase>
           <div className="flex-none">
             <div className="tabular-nums text-xl">
@@ -82,13 +125,7 @@ export function Slot({ slot, variant, onRegister }: SlotProps) {
             <div className="whitespace-nowrap overflow-hidden text-ellipsis text-xs">
               {slot.registered_client_name}
             </div>
-            <div className="text-xs">
-              {variant === "mine" ? (
-                <span className="font-semibold">this is your slot</span>
-              ) : (
-                "is currently registered"
-              )}
-            </div>
+            <div className="text-xs">is currently registered</div>
           </div>
         </SlotBase>
       </div>

@@ -1,4 +1,9 @@
-import { useIsFetching, useQuery } from "@tanstack/react-query";
+import {
+  useIsFetching,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { type } from "arktype";
 import { useEffect, useMemo, useState } from "react";
@@ -50,7 +55,29 @@ function ManyWaitingList() {
     null,
   );
 
-  const [persistent] = usePersistent();
+  const [persistent, setPersistent] = usePersistent();
+
+  const queryClient = useQueryClient();
+  const unregisterMutation = useMutation({
+    mutationFn: async (secret: string) => {
+      const res = await fetch(`/api/token/${secret}`, { method: "DELETE" });
+      if (res.status < 200 || res.status > 299) {
+        throw new Error("request failed", { cause: await res.text() });
+      }
+      return secret;
+    },
+    onSuccess: (secret) => {
+      persistent.known_tokens = persistent.known_tokens.filter(
+        (token) => token.secret !== secret,
+      );
+      setPersistent(persistent);
+      queryClient.invalidateQueries({ queryKey: ["list"] });
+      queryClient.invalidateQueries({ queryKey: ["token"] });
+    },
+    onError: (e, secret) => {
+      console.error(`unregistration failed for token ${secret}`, e);
+    },
+  });
 
   if (isPending) return <span>Loading...</span>;
   if (error) return <span>Oops!</span>;
@@ -62,11 +89,10 @@ function ManyWaitingList() {
           key={e.id}
           list={e}
           setRegisteringFor={setRegisteringFor}
-          registered_on_slot_ids={
-            persistent
-              .forList(e.id)
-              .map((item) => item.slot_id)
-              .filter((item) => !!item) as number[]
+          registeredTokens={persistent.forList(e.id)}
+          onUnregister={(secret) => unregisterMutation.mutate(secret)}
+          unregisteringSecret={
+            unregisterMutation.isPending ? unregisterMutation.variables : null
           }
         />
       ))}
@@ -83,45 +109,64 @@ function ManyWaitingList() {
 function SingleWaitingList({
   list,
   setRegisteringFor,
-  registered_on_slot_ids,
+  registeredTokens,
+  onUnregister,
+  unregisteringSecret,
 }: {
   list: typeof models.WaitingListRelated.infer;
   setRegisteringFor: (reg: Registration) => void;
-  registered_on_slot_ids: number[];
+  registeredTokens: (typeof models.KnownToken.infer)[];
+  onUnregister: (secret: string) => void;
+  unregisteringSecret: string | null;
 }) {
   const tata = useMemo(() => {
     const groupedslots = groupSlotsByLocalStartDateSorted(list.slots);
     return Object.entries(groupedslots).sort(([a], [b]) => a.localeCompare(b));
   }, [list.slots]);
+  const queuedTokens = list.tokens.filter(
+    (token) =>
+      !token.slot_id &&
+      (!token.real_turn_time || token.real_turn_time > new Date()),
+  );
+
+  // Find user's queued token (not assigned to a slot)
+  const myQueuedToken = registeredTokens.find((t) => t.slot_id === null);
+  const isUnregisteringQueued = myQueuedToken?.secret === unregisteringSecret;
+
   return (
     <SingleWaitingListTitle list={list}>
       <div>
         <h3 className="font-semibold">Next in line, not in a slot</h3>
-        <ol className="">
-          <button
-            type="button"
-            className="before:content-['→'] before:mr-1 btn-secondary"
-            onClick={() => setRegisteringFor({ list_id: list.id })}
-          >
-            take a ticket
-          </button>
-          {list.tokens
-            .filter(
-              (token) =>
-                !token.slot_id &&
-                (!token.real_turn_time || token.real_turn_time > new Date()),
-            )
-            .map((token) => (
-              <li
-                className="not-last:mb-0.5 before:content-['—'] before:mr-1"
-                key={token.id}
-              >
-                {token.client_name}
-                <span className="text-neutral-600 text-sm ml-1">
-                  #{token.id}
-                </span>
-              </li>
-            ))}
+        <div className="my-1">
+          {myQueuedToken ? (
+            <button
+              type="button"
+              className="before:content-['×'] before:mr-1 btn-secondary"
+              onClick={() => onUnregister(myQueuedToken.secret)}
+              disabled={isUnregisteringQueued}
+            >
+              {isUnregisteringQueued ? "unregistering..." : "unregister"}
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="before:content-['→'] before:mr-1 btn-secondary"
+              onClick={() => setRegisteringFor({ list_id: list.id })}
+            >
+              take a ticket
+            </button>
+          )}
+        </div>
+        <ol>
+          {queuedTokens.map((token) => (
+            <li
+              className="not-last:mb-0.5 before:content-['—'] before:mr-1"
+              key={token.id}
+            >
+              {token.client_name}
+              <span className="text-neutral-600 text-sm ml-1">#{token.id}</span>
+            </li>
+          ))}
         </ol>
       </div>
       {tata.map(([day, slots]) => (
@@ -130,7 +175,9 @@ function SingleWaitingList({
           <SlotsGrid
             slots={slots}
             setRegisteringFor={setRegisteringFor}
-            registered_on_slot_ids={registered_on_slot_ids}
+            registeredTokens={registeredTokens}
+            onUnregister={onUnregister}
+            unregisteringSecret={unregisteringSecret}
           />
         </div>
       ))}
@@ -141,22 +188,33 @@ function SingleWaitingList({
 function SlotsGrid({
   slots,
   setRegisteringFor,
-  registered_on_slot_ids,
+  registeredTokens,
+  onUnregister,
+  unregisteringSecret,
 }: {
   setRegisteringFor: (reg: Registration) => void;
   slots: Array<typeof models.SlotBase.infer>;
-  registered_on_slot_ids: number[];
+  registeredTokens: (typeof models.KnownToken.infer)[];
+  onUnregister: (secret: string) => void;
+  unregisteringSecret: string | null;
 }) {
+  const registeredSlotIds = registeredTokens
+    .map((t) => t.slot_id)
+    .filter((id): id is number => id !== null);
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 xl:grid-cols-5 gap-1">
       {slots.map((slot) => {
-        const variant = getSlotVariant(slot, registered_on_slot_ids);
+        const variant = getSlotVariant(slot, registeredSlotIds);
+        const token = registeredTokens.find((t) => t.slot_id === slot.id);
         return (
           <Slot
             key={slot.id}
             slot={slot}
             variant={variant}
             onRegister={variant === "open" ? setRegisteringFor : undefined}
+            onUnregister={token ? () => onUnregister(token.secret) : undefined}
+            isUnregistering={token?.secret === unregisteringSecret}
           />
         );
       })}
