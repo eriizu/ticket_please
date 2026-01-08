@@ -8,6 +8,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { type } from "arktype";
 import { useEffect, useMemo, useState } from "react";
 import { RegisterModal, type Registration } from "@/components/RegisterModal";
+import { NewListModal } from "@/components/NewListModal";
 import { Slot, getSlotVariant } from "@/components/Slot";
 import * as models from "../models";
 import { groupSlotsByLocalStartDateSorted } from "../utils/slots";
@@ -18,15 +19,28 @@ export const Route = createFileRoute("/")({
 
 function App() {
   const isFetch = useIsFetching();
+  const [isCreatingList, setIsCreatingList] = useState(false);
+
   return (
     <>
-      <div className="my-2">
-        <TokenSumary />
-      </div>
+      <TokenSumary />
       <div className="my-2 text-neutral-800">
         Requests status: {isFetch ? "fetching..." : "settled."}
       </div>
+      <div className="my-2">
+        <button
+          type="button"
+          className="btn-secondary"
+          onClick={() => setIsCreatingList(true)}
+        >
+          Create waiting list
+        </button>
+      </div>
       <ManyWaitingList />
+      <NewListModal
+        isOpen={isCreatingList}
+        onClose={() => setIsCreatingList(false)}
+      />
     </>
   );
 }
