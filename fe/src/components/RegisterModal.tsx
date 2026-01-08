@@ -26,6 +26,14 @@ export function RegisterModal(props: {
   const [storage, setStorage] = usePersistent();
   const [clientName, setClientName] = useState(storage.last_used_name || "");
   const [unavailable, setUnavailable] = useState(false);
+  const [autoCloseTO, setAutoCloseTO] = useState<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      clearTimeout(autoCloseTO || undefined);
+      setAutoCloseTO(null);
+    };
+  }, [autoCloseTO]);
 
   const {
     isPending,
@@ -63,7 +71,9 @@ export function RegisterModal(props: {
             slot_id={props.registeringFor.slot_id}
             setUnvailable={(x) => {
               setUnavailable(x);
-              setTimeout(props.onClose, 5000);
+              if (x) {
+                setAutoCloseTO(setTimeout(props.onClose, 5000));
+              }
             }}
           />
         ) : (
@@ -114,14 +124,13 @@ function SlotAvailability(props: {
   slot_id: number;
   setUnvailable: (x: boolean) => void;
 }) {
-  const { data, isPending, error } = useQuery({
+  const { data, isPending, error, isStale, isRefetching } = useQuery({
     queryKey: ["list", "slot", props.slot_id],
     refetchInterval: 1000,
     retry: 3,
     queryFn: async () =>
       await (await fetch(`/api/slot/${props.slot_id}`)).json(),
     select: (raw) => {
-      console.log(raw);
       const parsed = models.SlotRelated(raw);
       if (parsed instanceof type.errors) {
         console.error(parsed);
@@ -149,7 +158,10 @@ function SlotAvailability(props: {
     );
   }
   if (data?.token) {
-    props.setUnvailable(true);
+    if (!isStale && !isRefetching) {
+      console.log(data);
+      props.setUnvailable(true);
+    }
     data.registered_token_id = data.token.id;
     data.registered_client_name = data.token.client_name || undefined;
     return <Slot slot={data} variant="taken" />;
