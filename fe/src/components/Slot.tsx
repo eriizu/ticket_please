@@ -1,5 +1,7 @@
+import { useState } from "react";
 import type * as models from "../models";
 import type { Registration } from "./RegisterModal";
+import { Modal } from "./Modal";
 
 export type SlotVariant = "open" | "open-muted" | "taken" | "mine";
 
@@ -71,14 +73,15 @@ export function Slot({
   const status = getStatusDisplay(variant, slot.starts_at);
   const isPast = slot.starts_at <= new Date();
   const canRegister = variant === "open" && !isPast && onRegister;
+  const [aboutToUnregister, setAboutToUnregister] = useState(false);
 
   // Mine variant - clickable to unregister
   if (variant === "mine") {
     return (
       <button
         type="button"
-        onClick={onUnregister}
-        disabled={isUnregistering}
+        onClick={() => setAboutToUnregister(true)}
+        disabled={aboutToUnregister || isUnregistering}
         className="group w-full text-left cursor-pointer disabled:cursor-wait"
       >
         <SlotBase>
@@ -103,6 +106,35 @@ export function Slot({
               {isUnregistering ? "unregistering..." : "click to unregister"}
             </div>
           ) : null}
+          <Modal
+            onClose={() => setAboutToUnregister(false)}
+            isOpen={aboutToUnregister}
+          >
+            <h2 className="mx-2 mb-4 text-xl font-semibold">
+              Confirm unregister
+            </h2>
+            <div className="flex gap-1 mx-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setAboutToUnregister(false);
+                  if (onUnregister) onUnregister();
+                }}
+                disabled={isUnregistering}
+                className="flex-1 btn-primary mt-3 py-1"
+              >
+                Unregister
+              </button>
+              <button
+                onClick={() => setAboutToUnregister(false)}
+                type="button"
+                disabled={isUnregistering}
+                className="flex-1 btn-secondary mt-3 py-1"
+              >
+                Cancel
+              </button>
+            </div>
+          </Modal>
         </SlotBase>
       </button>
     );
