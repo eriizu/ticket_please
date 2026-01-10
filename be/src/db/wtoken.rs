@@ -38,7 +38,7 @@ impl WaitingTokenCriteria {
 }
 
 impl Repository {
-    #[instrument(skip(self), err, ret)]
+    #[instrument(skip(self), err, ret, level = "trace")]
     pub async fn get_waiting_token(
         &self,
         criteria: WaitingTokenCriteria,
@@ -72,7 +72,7 @@ where {} = $1
         })?)
     }
 
-    #[instrument(skip(self), err, ret)]
+    #[instrument(skip(self), err, ret, level = "trace")]
     pub async fn create_waiting_token(
         &self,
         wtoken_secret: &str,
@@ -110,7 +110,7 @@ RETURNING
         Ok(waiting_token)
     }
 
-    #[instrument(skip(self), err, ret)]
+    #[instrument(skip(self), err, ret, level = "trace")]
     pub async fn edit_waiting_token_2(
         &self,
         criteria: WaitingTokenCriteria,
@@ -151,7 +151,7 @@ RETURNING
             })?)
     }
 
-    #[instrument(skip(self), err)]
+    #[instrument(skip(self), err, level = "trace")]
     pub async fn get_waiting_tokens_per_list(
         &self,
         list_id: i32,
@@ -179,7 +179,7 @@ WHERE wlist_id = $1"#,
         Ok(waiting_tokens)
     }
 
-    #[instrument(skip(self), err, ret)]
+    #[instrument(skip(self), err, ret, level = "trace")]
     pub async fn delete_waiting_token(&self, secret: String) -> Result<(), RepoError> {
         let db_response =
             sqlx::query!("DELETE FROM waiting_token WHERE wtoken_secret = $1", secret)

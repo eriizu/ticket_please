@@ -39,7 +39,7 @@ pub struct PartialWaitingList {
 }
 
 impl Repository {
-    #[instrument(skip(self), err)]
+    #[instrument(skip(self), err, level = "trace")]
     pub async fn get_all_waiting_list(&self, open: bool) -> Result<Vec<WaitingList>, RepoError> {
         use futures_util::StreamExt;
         let now = Utc::now();
@@ -62,7 +62,7 @@ impl Repository {
         Ok(out)
     }
 
-    #[instrument(skip(self), err, ret)]
+    #[instrument(skip(self), err, ret, level = "trace")]
     pub async fn get_waiting_list_by_id(&self, id: i32) -> Result<WaitingList, RepoError> {
         let waiting_list = sqlx::query_as(
             "SELECT wlist_id, wlist_secret, wlist_name, wlist_opens_at, wlist_closes_at FROM waiting_list WHERE wlist_id = $1",
@@ -90,7 +90,7 @@ impl Repository {
         Ok(())
     }
 
-    #[instrument(skip(self), err, ret)]
+    #[instrument(skip(self), err, ret, level = "trace")]
     pub async fn get_waiting_list_by_secret(&self, secret: &str) -> Result<WaitingList, RepoError> {
         let waiting_list = sqlx::query_as(
             "SELECT wlist_id, wlist_secret, wlist_name, wlist_opens_at, wlist_closes_at FROM waiting_list WHERE wlist_secret = $1",

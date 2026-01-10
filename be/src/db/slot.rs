@@ -38,7 +38,7 @@ pub struct PartialSlot {
 }
 
 impl Repository {
-    #[instrument(skip(self), err, ret)]
+    #[instrument(skip(self), err, ret, level = "trace")]
     pub async fn get_slot_by_id(&self, id: i32) -> Result<Slot, RepoError> {
         let slot = sqlx::query_as(
             r#"select slot_id, slot_starts_at, slot_ends_at, wlist_id
@@ -55,7 +55,7 @@ where slot_id = $1"#,
         Ok(slot)
     }
 
-    #[instrument(skip(self), err, ret)]
+    #[instrument(skip(self), err, ret, level = "trace")]
     pub async fn get_slot_by_id_with_wtoken_id(
         &self,
         id: i32,
@@ -77,7 +77,7 @@ where slot_id = $1"#,
         Ok(slot)
     }
 
-    #[instrument(skip(self), err, ret)]
+    #[instrument(skip(self), err, ret, level = "trace")]
     pub async fn delete_slot_by_id_and_secret(
         &self,
         id: i32,
@@ -106,7 +106,7 @@ WHERE s.wlist_id = wl.wlist_id
         Ok(())
     }
 
-    #[instrument(skip(self), err)]
+    #[instrument(skip(self), err, level = "trace")]
     pub async fn get_slot_by_list_id(&self, list_id: i32) -> Result<Vec<Slot>, RepoError> {
         let slots = sqlx::query_as(
             "select slot_id, slot_starts_at, slot_ends_at, wlist_id from slot where wlist_id = $1",
@@ -121,7 +121,7 @@ WHERE s.wlist_id = wl.wlist_id
         Ok(slots)
     }
 
-    #[instrument(skip(self), err, ret)]
+    #[instrument(skip(self), err, ret, level = "trace")]
     pub async fn create_slot(
         &self,
         starts_at: DateTime<FixedOffset>,
@@ -150,7 +150,7 @@ RETURNING
         Ok(slot)
     }
 
-    #[instrument(skip(self), err, ret)]
+    #[instrument(skip(self), err, ret, level = "trace")]
     pub async fn edit_slot(&self, slot_id: i32, updates: PartialSlot) -> Result<Slot, RepoError> {
         let rq_head = "UPDATE slot SET\n";
         let rq_tail = r#"RETURNING
