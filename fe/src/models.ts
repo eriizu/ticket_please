@@ -64,21 +64,39 @@ export const KnownToken = type({
   secret: "string",
 });
 
+const KnownLists = type("unknown").narrow(
+  (value): value is { [id: number]: string } => {
+    if (value === null || typeof value !== "object" || Array.isArray(value)) {
+      return false;
+    }
+    return Object.entries(value).every(
+      ([key, val]) =>
+        Number.isInteger(Number(key)) && typeof val === "string",
+    );
+  },
+);
+
 export const PersistentStorageSchema = type({
   known_tokens: KnownToken.array(),
+  "known_lists?": KnownLists,
   last_used_name: "string | null",
 });
 
 export class PersistentStorage {
   known_tokens: (typeof KnownToken.infer)[];
   last_used_name: string | null;
+  known_lists: {
+    [id: number]: string;
+  };
 
   constructor(
-    known_tokens: (typeof KnownToken.infer)[],
     last_used_name: string | null,
+    known_tokens?: (typeof KnownToken.infer)[],
+    known_lists?: { [id: number]: string },
   ) {
-    this.known_tokens = known_tokens;
+    this.known_tokens = known_tokens || [];
     this.last_used_name = last_used_name;
+    this.known_lists = known_lists || {};
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: data is about to be parsed and checked
@@ -86,10 +104,13 @@ export class PersistentStorage {
     const parsed = PersistentStorageSchema(raw);
     if (parsed instanceof type.errors) {
       console.error(parsed.toString());
-      return new PersistentStorage([], null);
-    } else {
-      return new PersistentStorage(parsed.known_tokens, parsed.last_used_name);
+      return new PersistentStorage(null, [], {});
     }
+    return new PersistentStorage(
+      parsed.last_used_name,
+      parsed.known_tokens,
+      parsed.known_lists ?? {},
+    );
   }
 
   forList(list_id: number) {
