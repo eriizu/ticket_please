@@ -1,6 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import * as models from "../models";
-import { useLocalStorage } from "@/hooks/localStorage";
 import { type } from "arktype";
 
 const ListCreate = models.WaitingListBase.pick("name", "opens_at", "closes_at");
@@ -40,7 +39,7 @@ export function useCreateList(
       queryClient.invalidateQueries({ queryKey: ["list"] });
     },
     onError: (e, variables) => {
-      console.error(`registration failed for ${variables}`, e);
+      console.error(`create list for ${variables}`, e);
     },
   });
 }

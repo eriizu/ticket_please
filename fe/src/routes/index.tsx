@@ -137,6 +137,7 @@ function SingleWaitingList({
   unregisteringSecret: string | null;
   listSecret: string | null;
 }) {
+  const { mutate: delete_list } = useDeleteList();
   const [isGeneratingSlots, setIsGeneratingSlots] = useState(false);
   const tata = useMemo(() => {
     const groupedslots = groupSlotsByLocalStartDateSorted(list.slots);
@@ -189,6 +190,7 @@ function SingleWaitingList({
         </ol>
       </div>
       {listSecret ? (
+        <>
         <button
           type="button"
           className="btn-secondary w-fit"
@@ -196,6 +198,14 @@ function SingleWaitingList({
         >
           Generate slots
         </button>
+        <button
+          type="button"
+          className="btn-secondary w-fit"
+          onClick={() => delete_list(listSecret)}
+        >
+          Delete list
+        </button>
+        </>
       ) : null}
       {tata.map(([day, slots]) => (
         <div key={day}>
@@ -390,6 +400,7 @@ import {
   type FormatRelativeTimeOptions,
   formatRelativeTime,
 } from "../utils/date";
+import { useDeleteList } from "@/hooks/useDeleteList";
 
 function DateInWaitingList({
   fieldName,

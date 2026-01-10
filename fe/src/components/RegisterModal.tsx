@@ -139,6 +139,13 @@ function SlotAvailability(props: {
       return parsed;
     },
   });
+  useEffect(() => {
+    if (data?.token && !isStale && !isRefetching) {
+      props.setUnvailable(true);
+    } else {
+      props.setUnvailable(false);
+    }
+  }, [data, isStale, isRefetching, props.setUnvailable]);
   if (isPending) {
     return (
       <SlotBase>
@@ -158,14 +165,9 @@ function SlotAvailability(props: {
     );
   }
   if (data?.token) {
-    if (!isStale && !isRefetching) {
-      console.log(data);
-      props.setUnvailable(true);
-    }
     data.registered_token_id = data.token.id;
     data.registered_client_name = data.token.client_name || undefined;
     return <Slot slot={data} variant="taken" />;
   }
-  props.setUnvailable(false);
   if (data) return <Slot slot={data} variant="open" />;
 }
