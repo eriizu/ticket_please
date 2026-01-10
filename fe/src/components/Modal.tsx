@@ -34,12 +34,18 @@ export function Modal({ isOpen, onClose, children }: ModalProps) {
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
+      className="fixed inset-0 z-50 flex items-stretch bg-black/30 p-0 sm:items-center sm:justify-center sm:p-4"
       onClick={onClose}
     >
       <div
         ref={modalRef}
-        className="relative w-full max-w-md rounded-md bg-white p-4"
+        className="relative flex h-full w-full max-h-[100dvh] max-w-none flex-col overflow-y-auto bg-white p-4 text-left shadow-lg sm:h-auto sm:max-w-md sm:rounded-md"
+        style={{
+          paddingTop: "max(env(safe-area-inset-top), 1rem)",
+          paddingRight: "max(env(safe-area-inset-right), 1rem)",
+          paddingBottom: "max(env(safe-area-inset-bottom), 1rem)",
+          paddingLeft: "max(env(safe-area-inset-left), 1rem)",
+        }}
         onClick={(e) => e.stopPropagation()}
       >
         <button
