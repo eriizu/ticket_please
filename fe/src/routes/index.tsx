@@ -8,6 +8,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { type } from "arktype";
 import { useEffect, useMemo, useState } from "react";
 import { RegisterModal, type Registration } from "@/components/RegisterModal";
+import { NewListModal } from "@/components/NewListModal";
+import { GenSlotModal } from "@/components/GenSlotModal";
 import { Slot, getSlotVariant } from "@/components/Slot";
 import * as models from "../models";
 import { groupSlotsByLocalStartDateSorted } from "../utils/slots";
@@ -18,15 +20,28 @@ export const Route = createFileRoute("/")({
 
 function App() {
   const isFetch = useIsFetching();
+  const [isCreatingList, setIsCreatingList] = useState(false);
+
   return (
     <>
-      <div className="my-2">
-        <TokenSumary />
-      </div>
+      <TokenSumary />
       <div className="my-2 text-neutral-800">
         Requests status: {isFetch ? "fetching..." : "settled."}
       </div>
+      <div className="my-2">
+        <button
+          type="button"
+          className="btn-secondary"
+          onClick={() => setIsCreatingList(true)}
+        >
+          Create waiting list
+        </button>
+      </div>
       <ManyWaitingList />
+      <NewListModal
+        isOpen={isCreatingList}
+        onClose={() => setIsCreatingList(false)}
+      />
     </>
   );
 }
@@ -90,6 +105,7 @@ function ManyWaitingList() {
           list={e}
           setRegisteringFor={setRegisteringFor}
           registeredTokens={persistent.forList(e.id)}
+          listSecret={persistent.known_lists[e.id] || null}
           onUnregister={(secret) => unregisterMutation.mutate(secret)}
           unregisteringSecret={
             unregisterMutation.isPending ? unregisterMutation.variables : null
@@ -112,13 +128,16 @@ function SingleWaitingList({
   registeredTokens,
   onUnregister,
   unregisteringSecret,
+  listSecret,
 }: {
   list: typeof models.WaitingListRelated.infer;
   setRegisteringFor: (reg: Registration) => void;
   registeredTokens: (typeof models.KnownToken.infer)[];
   onUnregister: (secret: string) => void;
   unregisteringSecret: string | null;
+  listSecret: string | null;
 }) {
+  const [isGeneratingSlots, setIsGeneratingSlots] = useState(false);
   const tata = useMemo(() => {
     const groupedslots = groupSlotsByLocalStartDateSorted(list.slots);
     return Object.entries(groupedslots).sort(([a], [b]) => a.localeCompare(b));
@@ -169,6 +188,15 @@ function SingleWaitingList({
           ))}
         </ol>
       </div>
+      {listSecret ? (
+        <button
+          type="button"
+          className="btn-secondary w-fit"
+          onClick={() => setIsGeneratingSlots(true)}
+        >
+          Generate slots
+        </button>
+      ) : null}
       {tata.map(([day, slots]) => (
         <div key={day}>
           <h3 className="font-semibold">{day}</h3>
@@ -181,6 +209,15 @@ function SingleWaitingList({
           />
         </div>
       ))}
+      {listSecret ? (
+        <GenSlotModal
+          isOpen={isGeneratingSlots}
+          onClose={() => setIsGeneratingSlots(false)}
+          listId={list.id}
+          listName={list.name}
+          listSecret={listSecret}
+        />
+      ) : null}
     </SingleWaitingListTitle>
   );
 }
@@ -230,7 +267,7 @@ function SingleWaitingListTitle({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-3 p-2 border rounded-md border-neutral-500">
+    <div className="flex flex-col gap-3 p-2 border rounded-xl border-neutral-500">
       <div>
         <div className="text-2xl">{list.name}</div>
         <div className="text-neutral-800 text-sm">

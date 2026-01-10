@@ -12,6 +12,7 @@ export function usePersistent() {
     "persistent",
     models.PersistentStorage.fromRaw({
       known_tokens: KNOWN_TOKENS_EXAMPLE,
+      known_lists: {},
       last_used_name: null,
     }),
     models.PersistentStorage.fromRaw,
