@@ -1,3 +1,5 @@
+#!/usr/bin/env bun
+
 async function generate_example(opens_at, closes_at, name) {
   console.log("body",
     JSON.stringify({
