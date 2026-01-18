@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use tracing::error;
 mod dto;
+mod etag;
 mod handlers;
 use handlers::*;
 
@@ -118,7 +119,8 @@ pub async fn start(repo: Arc<crate::db::Repository>) -> anyhow::Result<()> {
         .at("/slot/:id", get(slot_get))
         .data(repo)
         .with(poem::middleware::Tracing)
-        .with(poem::middleware::RequestId::default());
+        .with(poem::middleware::RequestId::default())
+        .with(etag::EtagMiddleware);
     Server::new(TcpListener::bind("0.0.0.0:3000"))
         .run(routes)
         .await?;
