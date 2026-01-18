@@ -1,6 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import * as models from "../models";
-import { LIST_QUERY_KEY } from "./useWaitingLists";
 
 export function useUnregisterToken(
   persistent: models.PersistentStorage,
@@ -20,7 +19,7 @@ export function useUnregisterToken(
         (token) => token.secret !== secret,
       );
       setPersistent(persistent);
-      queryClient.invalidateQueries({ queryKey: LIST_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: ["list"] });
       queryClient.invalidateQueries({ queryKey: ["token"] });
     },
     onError: (error, secret) => {
