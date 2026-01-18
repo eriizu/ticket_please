@@ -1,4 +1,4 @@
-use poem::{Endpoint, EndpointExt, IntoResponse as _, Middleware, Request, Response, Result};
+use poem::{Endpoint, IntoResponse as _, Middleware, Request, Response, Result};
 
 fn compute_etag(content: &[u8]) -> String {
     use std::hash::{DefaultHasher, Hash as _, Hasher as _};
@@ -57,7 +57,7 @@ impl<E: Endpoint> Endpoint for EtagMiddlewareImpl<E> {
 #[cfg(test)]
 mod t {
     use super::*;
-    use poem::test::TestClient;
+    use poem::{EndpointExt as _, test::TestClient};
     // Use the `TokenMiddleware` middleware to convert the `index` endpoint.
 
     #[poem::handler]
