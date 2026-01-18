@@ -68,8 +68,31 @@ function ManyWaitingList() {
   const [persistent, setPersistent] = usePersistent();
   const unregisterMutation = useUnregisterToken(persistent, setPersistent);
 
-  if (isPending) return <span>Loading...</span>;
-  if (error) return <span>Oops!</span>;
+  if (isPending)
+    return (
+      <SingleWaitingListContainer>
+        <div className="flex-1 flex items-center justify-center text-neutral-700 p-10">
+          <div>Loading lists...</div>
+        </div>
+      </SingleWaitingListContainer>
+    );
+  if (error)
+    return (
+      <SingleWaitingListContainer>
+        <div className="flex-1 flex items-center justify-center text-red-700 p-10">
+          <div>Loading failure</div>
+        </div>
+      </SingleWaitingListContainer>
+    );
+  if (data.length === 0) {
+    return (
+      <SingleWaitingListContainer>
+        <div className="flex-1 flex items-center justify-center text-neutral-700 p-10">
+          <div>No lists are currently open.</div>
+        </div>
+      </SingleWaitingListContainer>
+    );
+  }
 
   return (
     <RegistrationProvider
@@ -139,7 +162,18 @@ const SingleWaitingList = memo(function SingleWaitingList({
   const adminSecret = listSecret ?? "";
 
   return (
-    <SingleWaitingListContainer list={list}>
+    <SingleWaitingListContainer>
+      <div>
+        <div className="text-2xl">{list.name}</div>
+        <div className="text-neutral-800 text-sm">
+          <OpenedTimeInterval
+            start={list.opens_at}
+            end={list.closes_at}
+            startVerb="opens"
+            endVerb="closes"
+          />
+        </div>
+      </div>
       <QueueSection listId={list.id} queueState={queueState} />
 
       {hasAdminAccess && (
@@ -169,27 +203,14 @@ const SingleWaitingList = memo(function SingleWaitingList({
 // -----------------------------------------------------------------------------
 
 interface SingleWaitingListContainerProps {
-  list: WaitingList;
   children: React.ReactNode;
 }
 
 const SingleWaitingListContainer = memo(function SingleWaitingListContainer({
-  list,
   children,
 }: SingleWaitingListContainerProps) {
   return (
     <div className="flex flex-col gap-3 p-2 border rounded-xl border-neutral-500">
-      <div>
-        <div className="text-2xl">{list.name}</div>
-        <div className="text-neutral-800 text-sm">
-          <OpenedTimeInterval
-            start={list.opens_at}
-            end={list.closes_at}
-            startVerb="opens"
-            endVerb="closes"
-          />
-        </div>
-      </div>
       {children}
     </div>
   );
