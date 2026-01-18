@@ -1,30 +1,45 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type } from "arktype";
+import { fetchWithETag, type WithETag } from "@/utils/fetchWithETag";
 import * as models from "../models";
 
-async function fetchOpenWaitingLists() {
-  const response = await fetch("/api/list?open=true");
-  if (response.status < 200 || response.status > 299) {
-    throw new Error("request failed", { cause: await response.text() });
-  }
-  const raw = await response.json();
-  const parsed = models.WaitingListRelated.array()(raw);
-  if (parsed instanceof type.errors) {
-    console.error(parsed);
-    throw parsed;
-  }
-  parsed.forEach((list) => {
-    models.matchSlotsToTokens(list.slots, list.tokens);
-  });
-  return parsed;
-}
+type WaitingListData = (typeof models.WaitingListRelated.infer)[];
+
+export const LIST_QUERY_KEY = ["list"] as const;
 
 export function useWaitingLists() {
+  const queryClient = useQueryClient();
+
   return useQuery({
-    queryKey: ["list"],
+    queryKey: LIST_QUERY_KEY,
     staleTime: 5 * 1000,
     refetchInterval: 10 * 1000,
     retry: 3,
-    queryFn: fetchOpenWaitingLists,
+    queryFn: async () => {
+      const cached =
+        queryClient.getQueryData<WithETag<WaitingListData>>(LIST_QUERY_KEY);
+      const result = await fetchWithETag<WaitingListData>(
+        "/api/list?open=true",
+        cached,
+      );
+
+      // Skip validation if data unchanged (304)
+      if (cached && result === cached) {
+        return result;
+      }
+
+      // Validate and transform new data
+      const parsed = models.WaitingListRelated.array()(result);
+      if (parsed instanceof type.errors) {
+        console.error(parsed);
+        throw parsed;
+      }
+      for (const list of parsed) {
+        models.matchSlotsToTokens(list.slots, list.tokens);
+      }
+
+      // Preserve ETag on validated data
+      return Object.assign(parsed, { _etag: result._etag });
+    },
   });
 }
