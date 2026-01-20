@@ -1,0 +1,13 @@
+{
+  "projectName": "ticket-please-fe",
+  "mode": "file-router",
+  "typescript": true,
+  "tailwind": true,
+  "packageManager": "bun",
+  "addOnOptions": {},
+  "git": true,
+  "version": 1,
+  "chosenAddOns": [
+    "biome"
+  ]
+}

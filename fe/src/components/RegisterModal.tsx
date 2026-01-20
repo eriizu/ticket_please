@@ -1,16 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { type } from "arktype";
 import { type FormEvent, useEffect, useRef, useState } from "react";
+import type { Registration } from "@/contexts/RegistrationContext";
 import { usePersistent } from "@/hooks/usePersistent";
 import { useRegisterOnList } from "@/hooks/useRegisterOnList";
 import { Modal } from "../components/Modal";
 import * as models from "../models";
 import { Slot, SlotBase } from "./Slot";
+import { useListSlot } from "@/hooks/useListSlot";
 
-export type Registration = {
-  list_id: number;
-  slot_id?: number;
-};
+export type { Registration };
 
 export function RegisterModal(props: {
   onClose: () => void;
@@ -124,21 +123,9 @@ function SlotAvailability(props: {
   slot_id: number;
   setUnvailable: (x: boolean) => void;
 }) {
-  const { data, isPending, error, isStale, isRefetching } = useQuery({
-    queryKey: ["list", "slot", props.slot_id],
-    refetchInterval: 1000,
-    retry: 3,
-    queryFn: async () =>
-      await (await fetch(`/api/slot/${props.slot_id}`)).json(),
-    select: (raw) => {
-      const parsed = models.SlotRelated(raw);
-      if (parsed instanceof type.errors) {
-        console.error(parsed);
-        throw parsed;
-      }
-      return parsed;
-    },
-  });
+  const { data, isPending, error, isStale, isRefetching } = useListSlot(
+    props.slot_id,
+  );
   useEffect(() => {
     if (data?.token && !isStale && !isRefetching) {
       props.setUnvailable(true);

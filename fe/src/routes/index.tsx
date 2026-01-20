@@ -1,18 +1,32 @@
-import {
-  useIsFetching,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useIsFetching } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { type } from "arktype";
-import { useEffect, useMemo, useState } from "react";
-import { RegisterModal, type Registration } from "@/components/RegisterModal";
-import { NewListModal } from "@/components/NewListModal";
+import { memo, useMemo, useState } from "react";
 import { GenSlotModal } from "@/components/GenSlotModal";
-import { Slot, getSlotVariant } from "@/components/Slot";
-import * as models from "../models";
-import { groupSlotsByLocalStartDateSorted } from "../utils/slots";
+import { NewListModal } from "@/components/NewListModal";
+import { RegisterModal } from "@/components/RegisterModal";
+import { getSlotVariant, Slot } from "@/components/Slot";
+import { TokenSumary } from "@/components/TokenSumary";
+import {
+  type Registration,
+  RegistrationProvider,
+  useListRegistration,
+  useRegistration,
+} from "@/contexts/RegistrationContext";
+import { useDeleteList } from "@/hooks/useDeleteList";
+import { usePersistent } from "@/hooks/usePersistent";
+import { useUnregisterToken } from "@/hooks/useUnregisterToken";
+import { useWaitingLists } from "@/hooks/useWaitingLists";
+import {
+  absoluteDateFormatter,
+  absoluteDateTimeFormatter,
+  absoluteTimeFormatter,
+} from "@/utils/formatters";
+import { groupSlotsByLocalStartDateSorted } from "@/utils/slots";
+import type * as models from "../models";
+
+type WaitingList = typeof models.WaitingListRelated.infer;
+type SlotData = typeof models.SlotBase.infer;
+type WaitingToken = typeof models.WaitingTokenBase.infer;
 
 export const Route = createFileRoute("/")({
   component: App,
@@ -47,213 +61,299 @@ function App() {
 }
 
 function ManyWaitingList() {
-  const { data, isPending, error } = useQuery({
-    queryKey: ["list"],
-    staleTime: 5 * 1000,
-    refetchInterval: 10 * 1000,
-    retry: 3,
-    queryFn: async () => fetch("/api/list?open=true").then((r) => r.json()),
-    select: (raw) => {
-      const out = models.WaitingListRelated.array()(raw);
-      if (out instanceof type.errors) {
-        console.error(out);
-        throw out;
-      }
-      out.forEach((slit) => {
-        models.matchSlotsToTokens(slit.slots, slit.tokens);
-      });
-      return out;
-    },
-  });
-
+  const { data, isPending, error } = useWaitingLists();
   const [registeringFor, setRegisteringFor] = useState<Registration | null>(
     null,
   );
-
   const [persistent, setPersistent] = usePersistent();
+  const unregisterMutation = useUnregisterToken(persistent, setPersistent);
 
-  const queryClient = useQueryClient();
-  const unregisterMutation = useMutation({
-    mutationFn: async (secret: string) => {
-      const res = await fetch(`/api/token/${secret}`, { method: "DELETE" });
-      if (res.status < 200 || res.status > 299) {
-        throw new Error("request failed", { cause: await res.text() });
-      }
-      return secret;
-    },
-    onSuccess: (secret) => {
-      persistent.known_tokens = persistent.known_tokens.filter(
-        (token) => token.secret !== secret,
-      );
-      setPersistent(persistent);
-      queryClient.invalidateQueries({ queryKey: ["list"] });
-      queryClient.invalidateQueries({ queryKey: ["token"] });
-    },
-    onError: (e, secret) => {
-      console.error(`unregistration failed for token ${secret}`, e);
-    },
-  });
-
-  if (isPending) return <span>Loading...</span>;
-  if (error) return <span>Oops!</span>;
+  if (isPending)
+    return (
+      <SingleWaitingListContainer>
+        <div className="flex-1 flex items-center justify-center text-neutral-700 p-10">
+          <div>Loading lists...</div>
+        </div>
+      </SingleWaitingListContainer>
+    );
+  if (error)
+    return (
+      <SingleWaitingListContainer>
+        <div className="flex-1 flex items-center justify-center text-red-700 p-10">
+          <div>Loading failure</div>
+        </div>
+      </SingleWaitingListContainer>
+    );
+  if (data.length === 0) {
+    return (
+      <SingleWaitingListContainer>
+        <div className="flex-1 flex items-center justify-center text-neutral-700 p-10">
+          <div>No lists are currently open.</div>
+        </div>
+      </SingleWaitingListContainer>
+    );
+  }
 
   return (
-    <div className="flex flex-col gap-4 ">
-      {data.map((e) => (
-        <SingleWaitingList
-          key={e.id}
-          list={e}
-          setRegisteringFor={setRegisteringFor}
-          registeredTokens={persistent.forList(e.id)}
-          listSecret={persistent.known_lists[e.id] || null}
-          onUnregister={(secret) => unregisterMutation.mutate(secret)}
-          unregisteringSecret={
-            unregisterMutation.isPending ? unregisterMutation.variables : null
-          }
-        />
-      ))}
-      {registeringFor && (
-        <RegisterModal
-          onClose={() => setRegisteringFor(null)}
-          registeringFor={registeringFor}
-        />
-      )}
-    </div>
+    <RegistrationProvider
+      setRegisteringFor={setRegisteringFor}
+      onUnregister={(secret) => unregisterMutation.mutate(secret)}
+      unregisteringSecret={
+        unregisterMutation.isPending ? unregisterMutation.variables : null
+      }
+      registeredTokens={persistent.known_tokens}
+    >
+      <div className="flex flex-col gap-4">
+        {data.map((list) => (
+          <SingleWaitingList
+            key={list.id}
+            list={list}
+            listSecret={persistent.known_lists[list.id] || null}
+          />
+        ))}
+        {registeringFor && (
+          <RegisterModal
+            onClose={() => setRegisteringFor(null)}
+            registeringFor={registeringFor}
+          />
+        )}
+      </div>
+    </RegistrationProvider>
   );
 }
 
-function SingleWaitingList({
-  list,
-  setRegisteringFor,
-  registeredTokens,
-  onUnregister,
-  unregisteringSecret,
-  listSecret,
-}: {
-  list: typeof models.WaitingListRelated.infer;
-  setRegisteringFor: (reg: Registration) => void;
-  registeredTokens: (typeof models.KnownToken.infer)[];
-  onUnregister: (secret: string) => void;
-  unregisteringSecret: string | null;
-  listSecret: string | null;
-}) {
-  const { mutate: delete_list } = useDeleteList();
-  const [isGeneratingSlots, setIsGeneratingSlots] = useState(false);
-  const tata = useMemo(() => {
-    const groupedslots = groupSlotsByLocalStartDateSorted(list.slots);
-    return Object.entries(groupedslots).sort(([a], [b]) => a.localeCompare(b));
-  }, [list.slots]);
-  const queuedTokens = list.tokens.filter(
-    (token) =>
-      !token.slot_id &&
-      (!token.real_turn_time || token.real_turn_time > new Date()),
-  );
+// -----------------------------------------------------------------------------
+// SingleWaitingList - Main container for a waiting list
+// -----------------------------------------------------------------------------
 
-  // Find user's queued token (not assigned to a slot)
-  const myQueuedToken = registeredTokens.find((t) => t.slot_id === null);
-  const isUnregisteringQueued = myQueuedToken?.secret === unregisteringSecret;
+interface SingleWaitingListProps {
+  list: WaitingList;
+  listSecret: string | null;
+}
+
+const SingleWaitingList = memo(function SingleWaitingList({
+  list,
+  listSecret,
+}: SingleWaitingListProps) {
+  const { mutate: deleteList } = useDeleteList();
+  const [isGeneratingSlots, setIsGeneratingSlots] = useState(false);
+  const { getTokensForList, unregisteringSecret } = useRegistration();
+
+  const registeredTokens = getTokensForList(list.id);
+
+  const slotsByDay = useMemo(() => {
+    const groupedSlots = groupSlotsByLocalStartDateSorted(list.slots);
+    return Object.entries(groupedSlots).sort(([a], [b]) => a.localeCompare(b));
+  }, [list.slots]);
+
+  const queueState = useMemo(() => {
+    const queuedTokens = list.tokens.filter(
+      (token) =>
+        !token.slot_id &&
+        (!token.real_turn_time || token.real_turn_time > new Date()),
+    );
+    const myQueuedToken = registeredTokens.find((t) => t.slot_id === null);
+    const isUnregisteringQueued = myQueuedToken?.secret === unregisteringSecret;
+
+    return { queuedTokens, myQueuedToken, isUnregisteringQueued };
+  }, [list.tokens, registeredTokens, unregisteringSecret]);
+
+  const hasAdminAccess = Boolean(listSecret);
+  const adminSecret = listSecret ?? "";
 
   return (
-    <SingleWaitingListTitle list={list}>
+    <SingleWaitingListContainer>
       <div>
-        <h3 className="font-semibold">Next in line, not in a slot</h3>
-        <div className="my-1">
-          {myQueuedToken ? (
-            <button
-              type="button"
-              className="before:content-['×'] before:mr-1 btn-secondary"
-              onClick={() => onUnregister(myQueuedToken.secret)}
-              disabled={isUnregisteringQueued}
-            >
-              {isUnregisteringQueued ? "unregistering..." : "unregister"}
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="before:content-['→'] before:mr-1 btn-secondary"
-              onClick={() => setRegisteringFor({ list_id: list.id })}
-            >
-              take a ticket
-            </button>
-          )}
-        </div>
-        <ol>
-          {queuedTokens.map((token) => (
-            <li
-              className="not-last:mb-0.5 before:content-['—'] before:mr-1"
-              key={token.id}
-            >
-              {token.client_name}
-              <span className="text-neutral-600 text-sm ml-1">#{token.id}</span>
-            </li>
-          ))}
-        </ol>
-      </div>
-      {listSecret ? (
-        <>
-        <button
-          type="button"
-          className="btn-secondary w-fit"
-          onClick={() => setIsGeneratingSlots(true)}
-        >
-          Generate slots
-        </button>
-        <button
-          type="button"
-          className="btn-secondary w-fit"
-          onClick={() => delete_list(listSecret)}
-        >
-          Delete list
-        </button>
-        </>
-      ) : null}
-      {tata.map(([day, slots]) => (
-        <div key={day}>
-          <h3 className="font-semibold">{day}</h3>
-          <SlotsGrid
-            slots={slots}
-            setRegisteringFor={setRegisteringFor}
-            registeredTokens={registeredTokens}
-            onUnregister={onUnregister}
-            unregisteringSecret={unregisteringSecret}
+        <div className="text-2xl">{list.name}</div>
+        <div className="text-neutral-800 text-sm">
+          <OpenedTimeInterval
+            start={list.opens_at}
+            end={list.closes_at}
+            startVerb="opens"
+            endVerb="closes"
           />
         </div>
-      ))}
-      {listSecret ? (
+      </div>
+      <QueueSection listId={list.id} queueState={queueState} />
+
+      {hasAdminAccess && (
+        <AdminActions
+          onGenerateSlots={() => setIsGeneratingSlots(true)}
+          onDeleteList={() => deleteList(adminSecret)}
+        />
+      )}
+
+      <SlotsByDaySection slotsByDay={slotsByDay} listId={list.id} />
+
+      {hasAdminAccess && (
         <GenSlotModal
           isOpen={isGeneratingSlots}
           onClose={() => setIsGeneratingSlots(false)}
           listId={list.id}
           listName={list.name}
-          listSecret={listSecret}
+          listSecret={adminSecret}
         />
-      ) : null}
-    </SingleWaitingListTitle>
+      )}
+    </SingleWaitingListContainer>
   );
+});
+
+// -----------------------------------------------------------------------------
+// SingleWaitingListContainer - Layout wrapper with header
+// -----------------------------------------------------------------------------
+
+interface SingleWaitingListContainerProps {
+  children: React.ReactNode;
 }
 
-function SlotsGrid({
-  slots,
-  setRegisteringFor,
-  registeredTokens,
-  onUnregister,
-  unregisteringSecret,
-}: {
-  setRegisteringFor: (reg: Registration) => void;
-  slots: Array<typeof models.SlotBase.infer>;
-  registeredTokens: (typeof models.KnownToken.infer)[];
-  onUnregister: (secret: string) => void;
-  unregisteringSecret: string | null;
-}) {
-  const registeredSlotIds = registeredTokens
-    .map((t) => t.slot_id)
-    .filter((id): id is number => id !== null);
+const SingleWaitingListContainer = memo(function SingleWaitingListContainer({
+  children,
+}: SingleWaitingListContainerProps) {
+  return (
+    <div className="flex flex-col gap-3 p-2 border rounded-xl border-neutral-500">
+      {children}
+    </div>
+  );
+});
+
+// -----------------------------------------------------------------------------
+// QueueSection - Shows queued tokens and take-a-ticket button
+// -----------------------------------------------------------------------------
+
+interface QueueState {
+  queuedTokens: WaitingToken[];
+  myQueuedToken: { secret: string } | undefined;
+  isUnregisteringQueued: boolean;
+}
+
+interface QueueSectionProps {
+  listId: number;
+  queueState: QueueState;
+}
+
+const QueueSection = memo(function QueueSection({
+  listId,
+  queueState,
+}: QueueSectionProps) {
+  const { setRegisteringFor, onUnregister } = useRegistration();
+  const { queuedTokens, myQueuedToken, isUnregisteringQueued } = queueState;
+
+  return (
+    <div>
+      <h3 className="font-semibold">Next in line, not in a slot</h3>
+      <div className="my-1">
+        {myQueuedToken ? (
+          <button
+            type="button"
+            className="before:content-['x'] before:mr-1 btn-secondary"
+            onClick={() => onUnregister(myQueuedToken.secret)}
+            disabled={isUnregisteringQueued}
+          >
+            {isUnregisteringQueued ? "unregistering..." : "unregister"}
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="before:content-['→'] before:mr-1 btn-secondary"
+            onClick={() => setRegisteringFor({ list_id: listId })}
+          >
+            take a ticket
+          </button>
+        )}
+      </div>
+      <ol>
+        {queuedTokens.map((token) => (
+          <li
+            className="not-last:mb-0.5 before:content-['--'] before:mr-1"
+            key={token.id}
+          >
+            {token.client_name}
+            <span className="text-neutral-600 text-sm ml-1">#{token.id}</span>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+});
+
+// -----------------------------------------------------------------------------
+// AdminActions - Admin-only buttons
+// -----------------------------------------------------------------------------
+
+interface AdminActionsProps {
+  onGenerateSlots: () => void;
+  onDeleteList: () => void;
+}
+
+const AdminActions = memo(function AdminActions({
+  onGenerateSlots,
+  onDeleteList,
+}: AdminActionsProps) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      <button
+        type="button"
+        className="btn-secondary w-fit"
+        onClick={onGenerateSlots}
+      >
+        Generate slots
+      </button>
+      <button
+        type="button"
+        className="btn-secondary w-fit"
+        onClick={onDeleteList}
+      >
+        Delete list
+      </button>
+    </div>
+  );
+});
+
+// -----------------------------------------------------------------------------
+// SlotsByDaySection - Groups slots by day
+// -----------------------------------------------------------------------------
+
+interface SlotsByDaySectionProps {
+  slotsByDay: Array<[string, SlotData[]]>;
+  listId: number;
+}
+
+const SlotsByDaySection = memo(function SlotsByDaySection({
+  slotsByDay,
+  listId,
+}: SlotsByDaySectionProps) {
+  return (
+    <>
+      {slotsByDay.map(([day, slots]) => (
+        <div key={day}>
+          <h3 className="font-semibold">{day}</h3>
+          <SlotsGrid slots={slots} listId={listId} />
+        </div>
+      ))}
+    </>
+  );
+});
+
+// -----------------------------------------------------------------------------
+// SlotsGrid - Grid of slot components
+// -----------------------------------------------------------------------------
+
+interface SlotsGridProps {
+  slots: SlotData[];
+  listId: number;
+}
+
+const SlotsGrid = memo(function SlotsGrid({ slots, listId }: SlotsGridProps) {
+  const { setRegisteringFor, onUnregister, unregisteringSecret } =
+    useRegistration();
+  const { tokens, registeredSlotIds } = useListRegistration(listId);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 xl:grid-cols-5 gap-1">
       {slots.map((slot) => {
         const variant = getSlotVariant(slot, registeredSlotIds);
-        const token = registeredTokens.find((t) => t.slot_id === slot.id);
+        const token = tokens.find((t) => t.slot_id === slot.id);
+
         return (
           <Slot
             key={slot.id}
@@ -267,161 +367,52 @@ function SlotsGrid({
       })}
     </div>
   );
-}
+});
 
-function SingleWaitingListTitle({
-  list,
-  children,
-}: {
-  list: typeof models.WaitingListRelated.infer;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex flex-col gap-3 p-2 border rounded-xl border-neutral-500">
-      <div>
-        <div className="text-2xl">{list.name}</div>
-        <div className="text-neutral-800 text-sm">
-          <OpenedTimeInterval
-            start={list.opens_at}
-            end={list.closes_at}
-            start_verb="opens"
-            end_verb="closes"
-          />
-        </div>
-      </div>
-      {children}
-    </div>
-  );
-}
+// -----------------------------------------------------------------------------
+// OpenedTimeInterval - Displays open/close time range
+// -----------------------------------------------------------------------------
 
-function SingleWaitingListDetails({
-  list,
-  register,
-}: {
-  list: typeof models.WaitingListRelated.infer;
-  register: () => void;
-}) {
-  const [now, setNow] = useState(() => new Date());
-  useEffect(() => {
-    const id = setInterval(() => {
-      setNow(new Date());
-    }, 1000); // update every second
-
-    return () => clearInterval(id); // cleanup on unmount
-  }, []);
-  return (
-    <>
-      <div className="grid grid-cols-2 gap-4 items-baseline w-fit">
-        <BlockyCounter
-          fieldName={{
-            singular: "person waiting not slotted",
-            other: "people waiting not slotted",
-          }}
-          value={list.tokens.filter((token) => !token.slot_id).length}
-        />
-        <button type="button" onClick={() => register()}>
-          → take a ticket
-        </button>
-      </div>
-      <div className="flex gap-4 items-baseline"></div>
-    </>
-  );
-}
-
-function OpenedTimeInterval(props: {
+interface OpenedTimeIntervalProps {
   start: Date | null;
   end: Date | null;
-  start_verb: string;
-  end_verb: string;
-}) {
-  const { start, end, start_verb, end_verb } = props;
+  startVerb: string;
+  endVerb: string;
+}
+
+function OpenedTimeInterval({
+  start,
+  end,
+  startVerb,
+  endVerb,
+}: OpenedTimeIntervalProps) {
   if (start && end) {
     if (start.getDate() === end.getDate()) {
       return (
         <>
-          <span>{`${absoluteDateFormater.format(start)} `}</span>
-          <span>{`between ${absoluteTimeFormater.format(start)} `}</span>
-          <span>{`and ${absoluteTimeFormater.format(end)}`}</span>
+          <span>{`${absoluteDateFormatter.format(start)} `}</span>
+          <span>{`between ${absoluteTimeFormatter.format(start)} `}</span>
+          <span>{`and ${absoluteTimeFormatter.format(end)}`}</span>
         </>
       );
-      // on date starts start.time, end end.time
-    } else {
-      return (
-        <>
-          <span>{`between ${absoluteDateTimeFormater.format(start)}`}</span>
-          <span>{`and ${absoluteDateTimeFormater.format(end)}`}</span>
-        </>
-      );
-      // starts start, ends end
     }
-  } else if (start) {
     return (
-      <span>{`${start_verb} ${absoluteDateTimeFormater.format(start)}`}</span>
+      <>
+        <span>{`between ${absoluteDateTimeFormatter.format(start)}`}</span>
+        <span>{` and ${absoluteDateTimeFormatter.format(end)}`}</span>
+      </>
     );
-  } else if (end) {
-    return <span>{`${end_verb} ${absoluteDateTimeFormater.format(end)}`}</span>;
   }
+
+  if (start) {
+    return (
+      <span>{`${startVerb} ${absoluteDateTimeFormatter.format(start)}`}</span>
+    );
+  }
+
+  if (end) {
+    return <span>{`${endVerb} ${absoluteDateTimeFormatter.format(end)}`}</span>;
+  }
+
   return <span>unknown start or end time</span>;
-}
-
-function BlockyCounter({
-  fieldName,
-  value,
-}: {
-  fieldName: { singular: string; other: string };
-  value: number;
-}) {
-  return (
-    <div className="bg-neutral-100 flex w-fit">
-      <div className="w-9 bg-neutral-300 text-center tabular-nums">{value}</div>
-      <div className="px-2">
-        {value === 1 ? fieldName.singular : fieldName.other}
-      </div>
-    </div>
-  );
-}
-
-const absoluteDateTimeFormater = Intl.DateTimeFormat("en-IE", {
-  dateStyle: "full",
-  timeStyle: "short",
-});
-
-const absoluteTimeFormater = Intl.DateTimeFormat("en-IE", {
-  timeStyle: "short",
-});
-
-const absoluteDateFormater = Intl.DateTimeFormat("en-IE", {
-  dateStyle: "full",
-});
-
-import { TokenSumary } from "@/components/TokenSumary";
-import { usePersistent } from "@/hooks/usePersistent";
-import {
-  type FormatRelativeTimeOptions,
-  formatRelativeTime,
-} from "../utils/date";
-import { useDeleteList } from "@/hooks/useDeleteList";
-
-function DateInWaitingList({
-  fieldName,
-  date,
-}: {
-  fieldName: string;
-  date: Date | null;
-}) {
-  return (
-    <div className="text-neutral-800">
-      <div className="text-sm">{`${fieldName} `}</div>
-      <div>{date ? absoluteDateTimeFormater.format(date) : "unknown"}</div>
-      <div>
-        {date ? (
-          <span title={absoluteDateTimeFormater.format(date)}>
-            {formatRelativeTime(date)}
-          </span>
-        ) : (
-          "unknown"
-        )}
-      </div>
-    </div>
-  );
 }
