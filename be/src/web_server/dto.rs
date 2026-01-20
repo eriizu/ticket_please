@@ -57,6 +57,12 @@ pub struct CreateWaitingListDto {
 }
 
 #[derive(serde::Deserialize)]
+pub struct CreateListMasterDto {
+    pub name: String,
+    pub parent_id: Option<i32>,
+}
+
+#[derive(serde::Deserialize)]
 pub struct PatchWaitingListDto {
     pub name: Option<String>,
     pub opens_at: Option<DateTime<FixedOffset>>,

@@ -6,6 +6,8 @@ mod wtoken;
 pub use wtoken::*;
 mod slot;
 pub use slot::*;
+mod list_master;
+pub use list_master::*;
 
 use sqlx::migrate::Migrator;
 

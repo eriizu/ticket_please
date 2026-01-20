@@ -1,6 +1,8 @@
 use anyhow::Context as _;
 use tracing::{error, info, trace, warn};
+
 mod db;
+mod util;
 mod web_server;
 
 #[tokio::main]
@@ -19,9 +21,22 @@ async fn main() -> anyhow::Result<()> {
         if let Err(err) = repo_clone.mig().await {
             error!("migration: {err}");
         }
+        ensure_root_list_master(repo_clone).await;
     });
     web_server::start(repo).await?;
     Ok(())
+}
+
+async fn ensure_root_list_master(repo: std::sync::Arc<db::Repository>) {
+    let root_list_master = repo.get_root_list_master().await.unwrap();
+    if root_list_master.is_empty() {
+        use crate::util::generate_secret;
+        let secret = generate_secret().unwrap();
+        warn!("no root list master exist, creating with secret {}", secret);
+        repo.create_list_master(&secret, "root", None)
+            .await
+            .unwrap();
+    }
 }
 
 fn get_env_var(name: &str) -> anyhow::Result<String> {

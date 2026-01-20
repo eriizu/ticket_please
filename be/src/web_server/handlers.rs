@@ -194,10 +194,7 @@ pub async fn waiting_token_get(
 }
 
 fn generate_secret() -> Result<String, HandlerError> {
-    use base64::Engine as _;
-    let mut buf = [0u8; 32];
-    getrandom::fill(&mut buf).map_err(HandlerError::RandomGeneration)?;
-    Ok(base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(buf))
+    crate::util::generate_secret().map_err(HandlerError::RandomGeneration)
 }
 
 #[poem::handler]
