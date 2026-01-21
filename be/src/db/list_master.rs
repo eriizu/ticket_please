@@ -15,6 +15,7 @@ pub struct ListMaster {
 pub struct PartialListMaster {
     pub lm_name: Option<String>,
     pub lm_parent: Option<i32>,
+    pub lm_secret: Option<String>,
 }
 
 impl Repository {
@@ -148,24 +149,15 @@ RETURNING lm_id, lm_secret, lm_name, lm_parent, lm_deleted_at"#,
         let mut generator = super::EditRequestAndArgsBuilder::new();
         generator.add_if_some("lm_name", updates.lm_name)?;
         generator.add_if_some("lm_parent", updates.lm_parent)?;
+        generator.add_if_some("lm_secret", updates.lm_secret)?;
         generator.add_where("lm_secret", admin_token)?;
         if !generator.has_assignments() {
             return Err(RepoError::EmptyUpdates {
                 context: "edit_list_master",
             });
         }
-        let rq_body = generator
-            .build_rq_str()
-            .lines()
-            .map(|line| {
-                if line.starts_with("WHERE lm_secret =") {
-                    format!("{line} AND lm_deleted_at IS NULL")
-                } else {
-                    line.to_string()
-                }
-            })
-            .collect::<Vec<_>>()
-            .join("\n");
+        generator.add_where_is_null("lm_deleted_at");
+        let rq_body = generator.build_rq_str();
         let rq = format!("{rq_head}\n{rq_body}\n{rq_tail}");
         debug!("edit request built: {}", rq);
         let query = sqlx::query_as_with(&rq, generator.args);

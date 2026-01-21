@@ -48,10 +48,15 @@ impl Repository {
     }
 }
 
+enum EditClause {
+    Assignment { name: String, bind_idx: usize },
+    Where { name: String, bind_idx: usize },
+    WhereNull { name: String },
+}
+
 struct EditRequestAndArgsBuilder {
     args: sqlx::postgres::PgArguments,
-    names: Vec<String>,
-    where_idx: Option<usize>,
+    clauses: Vec<EditClause>,
     bind_idx: usize,
 }
 
@@ -59,18 +64,15 @@ impl EditRequestAndArgsBuilder {
     pub fn new() -> Self {
         Self {
             args: sqlx::postgres::PgArguments::default(),
-            names: vec![],
-            where_idx: None,
+            clauses: vec![],
             bind_idx: 1,
         }
     }
 
     pub fn has_assignments(&self) -> bool {
-        if self.where_idx.is_some() {
-            (self.names.len() - 1) != 0
-        } else {
-            self.names.len() != 0
-        }
+        self.clauses
+            .iter()
+            .any(|clause| matches!(clause, EditClause::Assignment { .. }))
     }
 
     pub fn add_assignment<T>(&mut self, name: &'static str, val: T) -> Result<(), RepoError>
@@ -81,7 +83,10 @@ impl EditRequestAndArgsBuilder {
         self.args
             .add(val)
             .map_err(|e| RepoError::ArgumentEncode(name, e))?;
-        self.names.push(name.to_owned());
+        self.clauses.push(EditClause::Assignment {
+            name: name.to_owned(),
+            bind_idx: self.bind_idx,
+        });
         self.bind_idx += 1;
         Ok(())
     }
@@ -105,34 +110,41 @@ impl EditRequestAndArgsBuilder {
         self.args
             .add(val)
             .map_err(|e| RepoError::ArgumentEncode(name, e))?;
-        self.names.push(name.to_owned());
-        self.where_idx = Some(self.bind_idx);
+        self.clauses.push(EditClause::Where {
+            name: name.to_owned(),
+            bind_idx: self.bind_idx,
+        });
         self.bind_idx += 1;
         Ok(())
     }
 
+    pub fn add_where_is_null(&mut self, name: &'static str) {
+        self.clauses.push(EditClause::WhereNull {
+            name: name.to_owned(),
+        });
+    }
+
     pub fn build_rq_str(&mut self) -> String {
-        let mut rq = String::new();
-        let mut count_generated = 0;
-        let mut where_clause = None;
-        for (idx, name) in self.names.iter().enumerate() {
-            if let Some(where_idx) = self.where_idx
-                && where_idx == idx + 1
-            {
-                where_clause = Some(format!("WHERE {} = ${}", name, idx + 1));
-            } else {
-                rq.push_str(&format!(
-                    "{}{} = ${}",
-                    if count_generated != 0 { ",\n" } else { "" },
-                    name,
-                    idx + 1
-                ));
-                count_generated += 1;
+        let mut assignments = vec![];
+        let mut wheres = vec![];
+        for clause in &self.clauses {
+            match clause {
+                EditClause::Assignment { name, bind_idx } => {
+                    assignments.push(format!("{name} = ${bind_idx}"));
+                }
+                EditClause::Where { name, bind_idx } => {
+                    wheres.push(format!("{name} = ${bind_idx}"));
+                }
+                EditClause::WhereNull { name } => {
+                    wheres.push(format!("{name} IS NULL"));
+                }
             }
         }
+        let mut rq = assignments.join(",\n");
         rq.push('\n');
-        if let Some(where_clause) = where_clause {
-            rq.push_str(&where_clause);
+        if !wheres.is_empty() {
+            rq.push_str("WHERE ");
+            rq.push_str(&wheres.join(" AND "));
         }
         rq
     }
@@ -223,6 +235,24 @@ WHERE id = $1
 age = $3,
 name = $4
 WHERE id = $2
+"#
+            .trim()
+        );
+    }
+
+    #[test]
+    fn generate_rq_str_multiple_where() {
+        let mut generator = super::EditRequestAndArgsBuilder::new();
+        generator.add_assignment("hello", "world").unwrap();
+        generator.add_where("id", 14).unwrap();
+        generator.add_where_is_null("deleted_at");
+        generator.add_assignment("age", 12).unwrap();
+        let rq = generator.build_rq_str();
+        assert_eq!(
+            rq.trim(),
+            r#"hello = $1,
+age = $3
+WHERE id = $2 AND deleted_at IS NULL
 "#
             .trim()
         );

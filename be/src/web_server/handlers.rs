@@ -44,6 +44,44 @@ pub async fn waiting_list_delete(
 }
 
 #[poem::handler]
+pub async fn list_master_child_create(
+    Path(parent_secret): Path<String>,
+    Data(repo): Data<&ArcRepo>,
+    Json(body): Json<CreateListMasterDto>,
+) -> Result<Json<ListMasterWithSecretDto>, HandlerError> {
+    let parent = repo.get_list_master_by_secret(&parent_secret).await?;
+    Ok(Json(
+        repo.create_list_master(&generate_secret()?, &body.name, Some(parent.lm_id))
+            .await?
+            .into(),
+    ))
+}
+
+#[derive(serde::Deserialize)]
+struct DeleteListMasterChildParams {
+    parent_secret: String,
+    child_id: i32,
+}
+
+#[poem::handler]
+pub async fn list_master_child_delete(
+    Path(params): Path<DeleteListMasterChildParams>,
+    Data(repo): Data<&ArcRepo>,
+) -> Result<poem::http::StatusCode, HandlerError> {
+    let parent = repo
+        .get_list_master_by_secret(&params.parent_secret)
+        .await?;
+    let child = repo.get_list_master_by_id(params.child_id).await?;
+    if child.lm_parent != Some(parent.lm_id) {
+        Err(HandlerError::Discrepancy {
+            context: "checking list master parent",
+        })?;
+    }
+    repo.delete_list_master(child.lm_secret).await?;
+    Ok(poem::http::StatusCode::NO_CONTENT)
+}
+
+#[poem::handler]
 pub async fn waiting_token_delete(
     Path(secret): Path<String>,
     Data(repo): Data<&ArcRepo>,
@@ -71,6 +109,11 @@ pub async fn slot_delete(
 #[derive(serde::Deserialize)]
 struct GetManyListQuery {
     open: bool,
+}
+
+#[derive(serde::Deserialize)]
+struct WaitingListCreateQuery {
+    master: String,
 }
 
 #[poem::handler]
@@ -104,15 +147,18 @@ pub async fn waiting_list_get_many(
 
 #[poem::handler]
 pub async fn waiting_list_create(
+    Query(query): Query<WaitingListCreateQuery>,
     Json(input): Json<CreateWaitingListDto>,
     Data(repo): Data<&ArcRepo>,
 ) -> Result<Json<WaitingListWithSecretDto>, HandlerError> {
+    let list_master = repo.get_list_master_by_secret(&query.master).await?;
     Ok(Json(
         repo.create_waiting_list(
             &generate_secret()?,
             &input.name,
             input.opens_at,
             input.closes_at,
+            list_master.lm_id,
         )
         .await?
         .into(),

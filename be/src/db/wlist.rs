@@ -9,6 +9,7 @@ pub struct WaitingList {
     pub wlist_name: String,
     pub wlist_opens_at: Option<DateTime<FixedOffset>>,
     pub wlist_closes_at: Option<DateTime<FixedOffset>>,
+    pub lm_id: Option<i32>,
 }
 
 impl WaitingList {
@@ -44,7 +45,7 @@ impl Repository {
         use futures_util::StreamExt;
         let now = Utc::now();
         let mut waiting_list = sqlx::query_as::<_, WaitingList>(
-            "SELECT wlist_id, wlist_secret, wlist_name, wlist_opens_at, wlist_closes_at FROM waiting_list WHERE wlist_closes_at is null OR wlist_closes_at > $1",
+            "SELECT wlist_id, wlist_secret, wlist_name, wlist_opens_at, wlist_closes_at, lm_id FROM waiting_list WHERE wlist_closes_at is null OR wlist_closes_at > $1",
         )
             .bind(now)
             .fetch(&self.pool);
@@ -65,7 +66,7 @@ impl Repository {
     #[instrument(skip(self), err, ret, level = "trace")]
     pub async fn get_waiting_list_by_id(&self, id: i32) -> Result<WaitingList, RepoError> {
         let waiting_list = sqlx::query_as(
-            "SELECT wlist_id, wlist_secret, wlist_name, wlist_opens_at, wlist_closes_at FROM waiting_list WHERE wlist_id = $1",
+            "SELECT wlist_id, wlist_secret, wlist_name, wlist_opens_at, wlist_closes_at, lm_id FROM waiting_list WHERE wlist_id = $1",
         )
             .bind(id)
             .fetch_one(&self.pool)
@@ -93,7 +94,7 @@ impl Repository {
     #[instrument(skip(self), err, ret, level = "trace")]
     pub async fn get_waiting_list_by_secret(&self, secret: &str) -> Result<WaitingList, RepoError> {
         let waiting_list = sqlx::query_as(
-            "SELECT wlist_id, wlist_secret, wlist_name, wlist_opens_at, wlist_closes_at FROM waiting_list WHERE wlist_secret = $1",
+            "SELECT wlist_id, wlist_secret, wlist_name, wlist_opens_at, wlist_closes_at, lm_id FROM waiting_list WHERE wlist_secret = $1",
         )
             .bind(secret)
             .fetch_one(&self.pool)
@@ -108,16 +109,24 @@ impl Repository {
         name: &str,
         opens_at: Option<DateTime<FixedOffset>>,
         closes_at: Option<DateTime<FixedOffset>>,
+        list_master_id: i32,
     ) -> Result<WaitingList, RepoError> {
         let waiting_list = sqlx::query_as(
-            r#"INSERT INTO waiting_list(wlist_secret, wlist_name, wlist_opens_at, wlist_closes_at)
-VALUES ($1, $2, $3, $4)
-RETURNING wlist_id, wlist_name, wlist_secret, wlist_opens_at, wlist_closes_at"#,
+            r#"INSERT INTO waiting_list(
+    wlist_secret,
+    wlist_name,
+    wlist_opens_at,
+    wlist_closes_at,
+    lm_id
+)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING wlist_id, wlist_name, wlist_secret, wlist_opens_at, wlist_closes_at, lm_id"#,
         )
         .bind(admin_token)
         .bind(name)
         .bind(opens_at)
         .bind(closes_at)
+        .bind(list_master_id)
         .fetch_one(&self.pool)
         .await
         .map_err(|e| RepoError::Sqlx {
@@ -139,7 +148,8 @@ RETURNING wlist_id, wlist_name, wlist_secret, wlist_opens_at, wlist_closes_at"#,
     wlist_name,
     wlist_secret,
     wlist_opens_at,
-    wlist_closes_at"#;
+    wlist_closes_at,
+    lm_id"#;
         let mut generator = super::EditRequestAndArgsBuilder::new();
         generator.add_if_some("wlist_name", updates.wlist_name)?;
         generator.add_if_some("wlist_opens_at", updates.wlist_opens_at)?;
@@ -179,6 +189,7 @@ mod t {
             wlist_name: String::new(),
             wlist_opens_at: Some(mk_date(-1, now)),
             wlist_closes_at: Some(mk_date(1, now)),
+            lm_id: None,
         };
         assert!(wl.is_open(now), "{:#?}", wl);
 

@@ -56,10 +56,28 @@ pub struct CreateWaitingListDto {
     pub closes_at: Option<DateTime<FixedOffset>>,
 }
 
+#[derive(serde::Serialize)]
+pub struct ListMasterWithSecretDto {
+    pub id: i32,
+    pub name: String,
+    pub parent_id: Option<i32>,
+    pub secret: String,
+}
+
+impl From<crate::db::ListMaster> for ListMasterWithSecretDto {
+    fn from(src: crate::db::ListMaster) -> Self {
+        Self {
+            id: src.lm_id,
+            name: src.lm_name,
+            parent_id: src.lm_parent,
+            secret: src.lm_secret,
+        }
+    }
+}
+
 #[derive(serde::Deserialize)]
 pub struct CreateListMasterDto {
     pub name: String,
-    pub parent_id: Option<i32>,
 }
 
 #[derive(serde::Deserialize)]
