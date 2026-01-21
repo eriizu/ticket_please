@@ -21,21 +21,68 @@ async fn main() -> anyhow::Result<()> {
         if let Err(err) = repo_clone.mig().await {
             error!("migration: {err}");
         }
-        ensure_root_list_master(repo_clone).await;
+        ensure_default_list_master(repo_clone).await;
     });
     web_server::start(repo).await?;
     Ok(())
 }
 
-async fn ensure_root_list_master(repo: std::sync::Arc<db::Repository>) {
-    let root_list_master = repo.get_root_list_master().await.unwrap();
-    if root_list_master.is_empty() {
-        use crate::util::generate_secret;
-        let secret = generate_secret().unwrap();
-        warn!("no root list master exist, creating with secret {}", secret);
-        repo.create_list_master(&secret, "root", None)
+const DEFAULT_LIST_MASTER: &'static str = "DEFAULT_LIST_MASTER";
+
+async fn ensure_default_list_master(repo: std::sync::Arc<db::Repository>) {
+    let root_list_masters = repo.get_root_list_master().await.unwrap();
+    use crate::util::generate_secret;
+    let env_secret = std::env::var(DEFAULT_LIST_MASTER).ok();
+    let default_list_master = root_list_masters.iter().find(|x| x.lm_name == "default");
+    let generated_secret = generate_secret().unwrap();
+
+    match (default_list_master, env_secret) {
+        (Some(master), Some(secret)) if master.lm_secret == secret => {
+            warn!(
+                "not creating or editing default list master, {DEFAULT_LIST_MASTER} env variable and database match."
+            );
+        }
+        (Some(master), Some(secret)) => {
+            warn!(
+                "updating default master list with secret: {}",
+                master.lm_secret
+            );
+            repo.edit_list_master(
+                &master.lm_secret,
+                crate::db::PartialListMaster {
+                    lm_name: None,
+                    lm_parent: None,
+                    lm_secret: Some(secret.to_owned()),
+                },
+            )
             .await
             .unwrap();
+        }
+        (Some(master), None) => info!(
+            "default list master exists with secret: {} (no {DEFAULT_LIST_MASTER} provided) ",
+            master.lm_secret
+        ),
+        (None, Some(secret)) => {
+            warn!(
+                "no default list master exist, creating with {DEFAULT_LIST_MASTER} secret: {}",
+                secret
+            );
+            repo.create_list_master(&secret, "default", None)
+                .await
+                .unwrap();
+        }
+        (None, None) if root_list_masters.is_empty() => {
+            warn!(
+                "no default list master exist, creating with generated secret (add {DEFAULT_LIST_MASTER}={} to your env)",
+                &generated_secret
+            );
+            repo.create_list_master(&generated_secret, "default", None)
+                .await
+                .unwrap();
+        }
+        (None, None) => {
+            warn!("no {DEFAULT_LIST_MASTER} variable, not ensuring list master presence in DB")
+        }
     }
 }
 
