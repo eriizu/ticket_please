@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as PruneRouteImport } from './routes/prune'
 import { Route as OldRouteImport } from './routes/old'
+import { Route as MeRouteImport } from './routes/me'
 import { Route as IndexRouteImport } from './routes/index'
 
 const PruneRoute = PruneRouteImport.update({
@@ -23,6 +24,11 @@ const OldRoute = OldRouteImport.update({
   path: '/old',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MeRoute = MeRouteImport.update({
+  id: '/me',
+  path: '/me',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -31,30 +37,34 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/me': typeof MeRoute
   '/old': typeof OldRoute
   '/prune': typeof PruneRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/me': typeof MeRoute
   '/old': typeof OldRoute
   '/prune': typeof PruneRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/me': typeof MeRoute
   '/old': typeof OldRoute
   '/prune': typeof PruneRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/old' | '/prune'
+  fullPaths: '/' | '/me' | '/old' | '/prune'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/old' | '/prune'
-  id: '__root__' | '/' | '/old' | '/prune'
+  to: '/' | '/me' | '/old' | '/prune'
+  id: '__root__' | '/' | '/me' | '/old' | '/prune'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  MeRoute: typeof MeRoute
   OldRoute: typeof OldRoute
   PruneRoute: typeof PruneRoute
 }
@@ -75,6 +85,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OldRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/me': {
+      id: '/me'
+      path: '/me'
+      fullPath: '/me'
+      preLoaderRoute: typeof MeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -87,6 +104,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  MeRoute: MeRoute,
   OldRoute: OldRoute,
   PruneRoute: PruneRoute,
 }

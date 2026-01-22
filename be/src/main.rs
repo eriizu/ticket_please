@@ -1,4 +1,3 @@
-use anyhow::Context as _;
 use tracing::{error, info, trace, warn};
 
 mod db;

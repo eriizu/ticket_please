@@ -9,12 +9,19 @@ pub async fn index() -> String {
     "Hello".to_owned()
 }
 
+/// Get a waiting list by either its numeric ID or its admin secret.
+/// If the path parameter parses as an i32, it's treated as an ID.
+/// Otherwise, it's treated as a secret string.
 #[poem::handler]
 pub async fn waiting_list_get(
-    Path(id): Path<i32>,
+    Path(id_or_secret): Path<String>,
     Data(repo): Data<&ArcRepo>,
 ) -> Result<Json<WaitingListWithRelatedDto>, HandlerError> {
-    let waiting_list = repo.get_waiting_list_by_id(id).await?;
+    let waiting_list = match id_or_secret.parse::<i32>() {
+        Ok(id) => repo.get_waiting_list_by_id(id).await?,
+        Err(_) => repo.get_waiting_list_by_secret(&id_or_secret).await?,
+    };
+    let id = waiting_list.wlist_id;
     let tokens = repo
         .get_waiting_tokens_per_list(id)
         .await?
