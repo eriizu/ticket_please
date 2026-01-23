@@ -103,6 +103,20 @@ impl Repository {
         Ok(waiting_list)
     }
 
+    #[instrument(skip(self), err, ret, level = "trace")]
+    pub async fn get_waiting_list_by_invite(
+        &self,
+        invite_code: &str,
+    ) -> Result<WaitingList, RepoError> {
+        let waiting_list = sqlx::query_as(
+            "SELECT wlist_id, wlist_secret, wlist_invite_code, wlist_name, wlist_opens_at, wlist_closes_at, lm_id FROM waiting_list WHERE wlist_invite_code = $1",
+        )
+            .bind(invite_code)
+            .fetch_one(&self.pool)
+            .await.map_err(|e| RepoError::Sqlx { error: e, context: "get_waiting_list_by_invite" })?;
+        Ok(waiting_list)
+    }
+
     #[instrument(skip(self), err, ret)]
     pub async fn create_waiting_list(
         &self,

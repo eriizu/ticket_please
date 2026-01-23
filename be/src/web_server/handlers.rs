@@ -19,7 +19,14 @@ pub async fn waiting_list_get(
 ) -> Result<Json<WaitingListWithRelatedDto>, HandlerError> {
     let waiting_list = match id_or_secret.parse::<i32>() {
         Ok(id) => repo.get_waiting_list_by_id(id).await?,
-        Err(_) => repo.get_waiting_list_by_secret(&id_or_secret).await?,
+        Err(_) => match repo.get_waiting_list_by_secret(&id_or_secret).await {
+            Err(crate::db::RepoError::NotFound { context: _ })
+            | Err(crate::db::RepoError::Sqlx {
+                error: sqlx::Error::RowNotFound,
+                context: _,
+            }) => repo.get_waiting_list_by_invite(&id_or_secret).await?,
+            x => x?,
+        },
     };
     let id = waiting_list.wlist_id;
     let tokens = repo
