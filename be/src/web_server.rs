@@ -100,6 +100,7 @@ pub async fn start(repo: Arc<crate::db::Repository>) -> anyhow::Result<()> {
                 .patch(waiting_list_patch)
                 .delete(waiting_list_delete),
         )
+        .at("/list/:secret/invite", get(waiting_list_invite_get))
         .at(
             "/list_master/:parent_secret/child",
             post(list_master_child_create),

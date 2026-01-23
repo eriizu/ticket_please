@@ -6,6 +6,7 @@ use tracing::{debug, error, instrument, warn};
 pub struct WaitingList {
     pub wlist_id: i32,
     pub wlist_secret: String,
+    pub wlist_invite_code: Option<String>,
     pub wlist_name: String,
     pub wlist_opens_at: Option<DateTime<FixedOffset>>,
     pub wlist_closes_at: Option<DateTime<FixedOffset>>,
@@ -45,7 +46,7 @@ impl Repository {
         use futures_util::StreamExt;
         let now = Utc::now();
         let mut waiting_list = sqlx::query_as::<_, WaitingList>(
-            "SELECT wlist_id, wlist_secret, wlist_name, wlist_opens_at, wlist_closes_at, lm_id FROM waiting_list WHERE wlist_closes_at is null OR wlist_closes_at > $1",
+            "SELECT wlist_id, wlist_secret, wlist_invite_code, wlist_name, wlist_opens_at, wlist_closes_at, lm_id FROM waiting_list WHERE wlist_closes_at is null OR wlist_closes_at > $1",
         )
             .bind(now)
             .fetch(&self.pool);
@@ -66,7 +67,7 @@ impl Repository {
     #[instrument(skip(self), err, ret, level = "trace")]
     pub async fn get_waiting_list_by_id(&self, id: i32) -> Result<WaitingList, RepoError> {
         let waiting_list = sqlx::query_as(
-            "SELECT wlist_id, wlist_secret, wlist_name, wlist_opens_at, wlist_closes_at, lm_id FROM waiting_list WHERE wlist_id = $1",
+            "SELECT wlist_id, wlist_secret, wlist_invite_code, wlist_name, wlist_opens_at, wlist_closes_at, lm_id FROM waiting_list WHERE wlist_id = $1",
         )
             .bind(id)
             .fetch_one(&self.pool)
@@ -94,7 +95,7 @@ impl Repository {
     #[instrument(skip(self), err, ret, level = "trace")]
     pub async fn get_waiting_list_by_secret(&self, secret: &str) -> Result<WaitingList, RepoError> {
         let waiting_list = sqlx::query_as(
-            "SELECT wlist_id, wlist_secret, wlist_name, wlist_opens_at, wlist_closes_at, lm_id FROM waiting_list WHERE wlist_secret = $1",
+            "SELECT wlist_id, wlist_secret, wlist_invite_code, wlist_name, wlist_opens_at, wlist_closes_at, lm_id FROM waiting_list WHERE wlist_secret = $1",
         )
             .bind(secret)
             .fetch_one(&self.pool)
@@ -106,6 +107,7 @@ impl Repository {
     pub async fn create_waiting_list(
         &self,
         admin_token: &str,
+        invite_code: &str,
         name: &str,
         opens_at: Option<DateTime<FixedOffset>>,
         closes_at: Option<DateTime<FixedOffset>>,
@@ -114,15 +116,17 @@ impl Repository {
         let waiting_list = sqlx::query_as(
             r#"INSERT INTO waiting_list(
     wlist_secret,
+    wlist_invite_code,
     wlist_name,
     wlist_opens_at,
     wlist_closes_at,
     lm_id
 )
-VALUES ($1, $2, $3, $4, $5)
-RETURNING wlist_id, wlist_name, wlist_secret, wlist_opens_at, wlist_closes_at, lm_id"#,
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING wlist_id, wlist_name, wlist_secret, wlist_invite_code, wlist_opens_at, wlist_closes_at, lm_id"#,
         )
         .bind(admin_token)
+        .bind(invite_code)
         .bind(name)
         .bind(opens_at)
         .bind(closes_at)
@@ -147,6 +151,7 @@ RETURNING wlist_id, wlist_name, wlist_secret, wlist_opens_at, wlist_closes_at, l
     wlist_id,
     wlist_name,
     wlist_secret,
+    wlist_invite_code,
     wlist_opens_at,
     wlist_closes_at,
     lm_id"#;
@@ -186,6 +191,7 @@ mod t {
         let mut wl = super::WaitingList {
             wlist_id: 1,
             wlist_secret: String::new(),
+            wlist_invite_code: None,
             wlist_name: String::new(),
             wlist_opens_at: Some(mk_date(-1, now)),
             wlist_closes_at: Some(mk_date(1, now)),

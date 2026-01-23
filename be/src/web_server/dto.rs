@@ -22,6 +22,12 @@ pub struct WaitingListWithSecretDto {
     #[serde(flatten)]
     pub base: WaitingListBaseDto,
     pub secret: String,
+    pub invite_code: Option<String>,
+}
+
+#[derive(serde::Serialize)]
+pub struct WaitingListInviteDto {
+    pub invite_code: Option<String>,
 }
 
 impl From<crate::db::WaitingList> for WaitingListBaseDto {
@@ -45,6 +51,7 @@ impl From<crate::db::WaitingList> for WaitingListWithSecretDto {
                 closes_at: w.wlist_closes_at,
             },
             secret: w.wlist_secret,
+            invite_code: w.wlist_invite_code,
         }
     }
 }
