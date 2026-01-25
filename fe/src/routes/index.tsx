@@ -8,12 +8,10 @@ import {
   SingleWaitingList,
   SingleWaitingListContainer,
 } from "@/components/WaitingList";
-import {
-  type Registration,
-  RegistrationProvider,
+import type {
+  Registration,
 } from "@/contexts/RegistrationContext";
 import { usePersistent } from "@/hooks/usePersistent";
-import { useUnregisterToken } from "@/hooks/useUnregisterToken";
 import { useWaitingLists } from "@/hooks/useWaitingLists";
 
 export const Route = createFileRoute("/")({
@@ -53,8 +51,7 @@ function ManyWaitingList() {
   const [registeringFor, setRegisteringFor] = useState<Registration | null>(
     null,
   );
-  const [persistent, setPersistent] = usePersistent();
-  const unregisterMutation = useUnregisterToken();
+  const [persistent, _] = usePersistent();
 
   if (isPending)
     return (
@@ -83,14 +80,6 @@ function ManyWaitingList() {
   }
 
   return (
-    <RegistrationProvider
-      setRegisteringFor={setRegisteringFor}
-      onUnregister={(secret) => unregisterMutation.mutate(secret)}
-      unregisteringSecret={
-        unregisterMutation.isPending ? unregisterMutation.variables : null
-      }
-      registeredTokens={persistent.known_tokens}
-    >
       <div className="flex flex-col gap-4">
         {data.map((list) => (
           <SingleWaitingList
@@ -106,6 +95,5 @@ function ManyWaitingList() {
           />
         )}
       </div>
-    </RegistrationProvider>
   );
 }

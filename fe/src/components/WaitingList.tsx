@@ -1,9 +1,8 @@
 import { memo, useMemo, useState } from "react";
 import { GenSlotModal } from "@/components/GenSlotModal";
 import { getSlotVariant, Slot } from "@/components/Slot";
-import {
-  useListRegistration,
-  useRegistration,
+import type {
+  Registration,
 } from "@/contexts/RegistrationContext";
 import { useDeleteList } from "@/hooks/useDeleteList";
 import {
@@ -15,6 +14,7 @@ import { groupSlotsByLocalStartDateSorted } from "@/utils/slots";
 import type * as models from "../models";
 import { useUnregisterToken } from "@/hooks/useUnregisterToken";
 import { usePersistent } from "@/hooks/usePersistent";
+import { RegisterModal } from "./RegisterModal";
 
 type WaitingList = typeof models.WaitingListRelated.infer;
 type SlotData = typeof models.SlotBase.infer;
@@ -151,8 +151,9 @@ interface QueueSectionProps {
 
 const QueueSection = memo(
   ({ listId, queuedTokens, mySecret }: QueueSectionProps) => {
-    // const { setRegisteringFor } = useRegistration();
-    // TODO: replace directly with the register modal and query
+    const [registeringFor, setRegisteringFor] = useState<Registration | null>(
+      null,
+    );
     const { mutate: unregister, isPending } = useUnregisterToken();
 
     return (
@@ -174,8 +175,7 @@ const QueueSection = memo(
             <button
               type="button"
               className="before:content-['→'] before:mr-1 btn-secondary"
-              // onClick={() => setRegisteringFor({ list_id: listId })}
-              onClick={() => { }}
+              onClick={() => setRegisteringFor({ list_id: listId })}
             >
               take a ticket
             </button>
@@ -192,6 +192,12 @@ const QueueSection = memo(
             </li>
           ))}
         </ol>
+        {registeringFor && (
+          <RegisterModal
+            onClose={() => setRegisteringFor(null)}
+            registeringFor={registeringFor}
+          />
+        )}
       </div>
     );
   },
