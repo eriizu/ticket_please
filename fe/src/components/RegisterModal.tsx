@@ -156,5 +156,5 @@ function SlotAvailability(props: {
     data.registered_client_name = data.token.client_name || undefined;
     return <Slot slot={data} variant="taken" />;
   }
-  if (data) return <Slot slot={data} variant="open" />;
+  if (data) return <Slot slot={data} variant="open-muted" />;
 }

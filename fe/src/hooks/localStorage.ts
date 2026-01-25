@@ -9,6 +9,23 @@ declare global {
   }
 }
 
+export function getFromLocalStorage<T>(
+  key: string,
+  construct: ((raw: unknown) => T) | null,
+): T | undefined {
+  try {
+    const item = window.localStorage.getItem(key);
+    if (construct) {
+      return item ? construct(JSON.parse(item)) : undefined;
+    } else {
+      return item ? JSON.parse(item) : undefined;
+    }
+  } catch (error) {
+    console.warn(`Error reading localStorage key “${key}”:`, error);
+    return undefined;
+  }
+}
+
 /**
  * A hook to manage localStorage with multi-tab synchronization.
  * @param key The key to store in localStorage.
@@ -26,17 +43,7 @@ export function useLocalStorage<T>(
       return initialValue;
     }
 
-    try {
-      const item = window.localStorage.getItem(key);
-      if (construct) {
-        return item ? construct(JSON.parse(item)) : initialValue;
-      } else {
-        return item ? JSON.parse(item) : initialValue;
-      }
-    } catch (error) {
-      console.warn(`Error reading localStorage key “${key}”:`, error);
-      return initialValue;
-    }
+    return getFromLocalStorage(key, construct) || initialValue;
   });
 
   // 2. Wrap the setter function

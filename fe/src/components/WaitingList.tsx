@@ -13,82 +13,111 @@ import {
 } from "@/utils/formatters";
 import { groupSlotsByLocalStartDateSorted } from "@/utils/slots";
 import type * as models from "../models";
+import { useUnregisterToken } from "@/hooks/useUnregisterToken";
+import { usePersistent } from "@/hooks/usePersistent";
 
 type WaitingList = typeof models.WaitingListRelated.infer;
 type SlotData = typeof models.SlotBase.infer;
 type WaitingToken = typeof models.WaitingTokenBase.infer;
+
+interface SingleWaitingList1Props {
+  list: WaitingList;
+  listManagmentSecret: string | null;
+}
+
+// export const SingleWaitingList1 = memo(function SingleWaitingList(
+//   props: SingleWaitingList1Props,
+// ) {
+//   return (
+//     <SingleWaitingListContainer>
+//       <div>
+//         <div className="text-2xl">{props.list.name}</div>
+//         <div className="text-neutral-800 text-sm">
+//           <OpenedTimeInterval
+//             start={props.list.opens_at}
+//             end={props.list.closes_at}
+//             startVerb="opens"
+//             endVerb="closes"
+//           />
+//         </div>
+//       </div>
+//       <QueueSection listId={props.list.id} queueState={queueState} />
+//
+//       {props.listManagmentSecret && (
+//         <AdminActions
+//           onGenerateSlots={() => setIsModalSlotOpen(true)}
+//           onDeleteList={() => deleteList(adminSecret)}
+//         />
+//       )}
+//
+//       <SlotsByDaySection slotsByDay={slotsByDay} listId={list.id} />
+//
+//       {hasAdminAccess && (
+//         <GenSlotModal
+//           isOpen={isModalSlotOpen}
+//           onClose={() => setIsModalSlotOpen(false)}
+//           listId={list.id}
+//           listName={list.name}
+//           listSecret={adminSecret}
+//         />
+//       )}
+//     </SingleWaitingListContainer>
+//   );
+// });
 
 interface SingleWaitingListProps {
   list: WaitingList;
   listManagmentSecret: string | null;
 }
 
-export const SingleWaitingList = memo(function SingleWaitingList({
-  list,
-  listManagmentSecret,
-}: SingleWaitingListProps) {
-  const { mutate: deleteList } = useDeleteList();
-  const [isGeneratingSlots, setIsGeneratingSlots] = useState(false);
-  const { getTokensForList, unregisteringSecret } = useRegistration();
+export const SingleWaitingList = memo(
+  ({ list, listManagmentSecret }: SingleWaitingListProps) => {
+    const [persistent] = usePersistent();
 
-  const registeredTokens = getTokensForList(list.id);
+    const registeredTokens = persistent.forList(list.id);
 
-  const slotsByDay = useMemo(() => {
-    const groupedSlots = groupSlotsByLocalStartDateSorted(list.slots);
-    return Object.entries(groupedSlots).sort(([a], [b]) => a.localeCompare(b));
-  }, [list.slots]);
+    const queueState = useMemo(() => {
+      const queuedTokens = list.tokens.filter(
+        (token) =>
+          !token.slot_id &&
+          (!token.real_turn_time || token.real_turn_time > new Date()),
+      );
+      // TODO: figure out if this is correct?
+      // i have the feeling that stoping at the first known token of this list without
+      // a slot id not to be the right thing to do, espacially if there a multiple
+      const mySecret = registeredTokens.find((t) => t.slot_id === null)?.secret;
 
-  const queueState = useMemo(() => {
-    const queuedTokens = list.tokens.filter(
-      (token) =>
-        !token.slot_id &&
-        (!token.real_turn_time || token.real_turn_time > new Date()),
-    );
-    const myQueuedToken = registeredTokens.find((t) => t.slot_id === null);
-    const isUnregisteringQueued = myQueuedToken?.secret === unregisteringSecret;
+      return { queuedTokens, mySecret };
+    }, [list.tokens, registeredTokens]);
 
-    return { queuedTokens, myQueuedToken, isUnregisteringQueued };
-  }, [list.tokens, registeredTokens, unregisteringSecret]);
-
-  const hasAdminAccess = Boolean(listManagmentSecret);
-  const adminSecret = listManagmentSecret ?? "";
-
-  return (
-    <SingleWaitingListContainer>
-      <div>
-        <div className="text-2xl">{list.name}</div>
-        <div className="text-neutral-800 text-sm">
-          <OpenedTimeInterval
-            start={list.opens_at}
-            end={list.closes_at}
-            startVerb="opens"
-            endVerb="closes"
-          />
+    return (
+      <SingleWaitingListContainer>
+        <div>
+          <div className="text-2xl">{list.name}</div>
+          <div className="text-neutral-800 text-sm">
+            <OpenedTimeInterval
+              start={list.opens_at}
+              end={list.closes_at}
+              startVerb="opens"
+              endVerb="closes"
+            />
+          </div>
         </div>
-      </div>
-      <QueueSection listId={list.id} queueState={queueState} />
-
-      {hasAdminAccess && (
-        <AdminActions
-          onGenerateSlots={() => setIsGeneratingSlots(true)}
-          onDeleteList={() => deleteList(adminSecret)}
-        />
-      )}
-
-      <SlotsByDaySection slotsByDay={slotsByDay} listId={list.id} />
-
-      {hasAdminAccess && (
-        <GenSlotModal
-          isOpen={isGeneratingSlots}
-          onClose={() => setIsGeneratingSlots(false)}
+        <QueueSection
           listId={list.id}
-          listName={list.name}
-          listSecret={adminSecret}
+          queuedTokens={queueState.queuedTokens}
+          mySecret={queueState.mySecret}
         />
-      )}
-    </SingleWaitingListContainer>
-  );
-});
+
+        {listManagmentSecret && (
+          <AdminActions list={list} managmentSecret={listManagmentSecret} />
+        )}
+
+        <SlotsByDaySection slots={list.slots} listId={list.id} />
+      </SingleWaitingListContainer>
+    );
+  },
+);
 
 // -----------------------------------------------------------------------------
 // SingleWaitingListContainer - Layout wrapper with header
@@ -98,106 +127,114 @@ interface SingleWaitingListContainerProps {
   children: React.ReactNode;
 }
 
-export const SingleWaitingListContainer = memo(function SingleWaitingListContainer({
-  children,
-}: SingleWaitingListContainerProps) {
-  return (
-    <div className="flex flex-col gap-3 p-2 border rounded-xl border-neutral-500">
-      {children}
-    </div>
-  );
-});
+export const SingleWaitingListContainer = memo(
+  function SingleWaitingListContainer({
+    children,
+  }: SingleWaitingListContainerProps) {
+    return (
+      <div className="flex flex-col gap-3 p-2 border rounded-xl border-neutral-500">
+        {children}
+      </div>
+    );
+  },
+);
 
 // -----------------------------------------------------------------------------
 // QueueSection - Shows queued tokens and take-a-ticket button
 // -----------------------------------------------------------------------------
 
-interface QueueState {
-  queuedTokens: WaitingToken[];
-  myQueuedToken: { secret: string } | undefined;
-  isUnregisteringQueued: boolean;
-}
-
 interface QueueSectionProps {
   listId: number;
-  queueState: QueueState;
+  queuedTokens: WaitingToken[];
+  mySecret?: string;
 }
 
-const QueueSection = memo(function QueueSection({
-  listId,
-  queueState,
-}: QueueSectionProps) {
-  const { setRegisteringFor, onUnregister } = useRegistration();
-  const { queuedTokens, myQueuedToken, isUnregisteringQueued } = queueState;
+const QueueSection = memo(
+  ({ listId, queuedTokens, mySecret }: QueueSectionProps) => {
+    // const { setRegisteringFor } = useRegistration();
+    // TODO: replace directly with the register modal and query
+    const { mutate: unregister, isPending } = useUnregisterToken();
 
-  return (
-    <div>
-      <h3 className="font-semibold">Next in line, not in a slot</h3>
-      <div className="my-1">
-        {myQueuedToken ? (
-          <button
-            type="button"
-            className="before:content-['x'] before:mr-1 btn-secondary"
-            onClick={() => onUnregister(myQueuedToken.secret)}
-            disabled={isUnregisteringQueued}
-          >
-            {isUnregisteringQueued ? "unregistering..." : "unregister"}
-          </button>
-        ) : (
-          <button
-            type="button"
-            className="before:content-['→'] before:mr-1 btn-secondary"
-            onClick={() => setRegisteringFor({ list_id: listId })}
-          >
-            take a ticket
-          </button>
-        )}
+    return (
+      <div>
+        <h3 className="font-semibold">Next in line, not in a slot</h3>
+        <div className="my-1">
+          {mySecret ? (
+            <button
+              type="button"
+              className="before:content-['x'] before:mr-1 btn-secondary"
+              onClick={() => {
+                unregister(mySecret);
+              }}
+              disabled={isPending}
+            >
+              {isPending ? "unregistering..." : "unregister"}
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="before:content-['→'] before:mr-1 btn-secondary"
+              // onClick={() => setRegisteringFor({ list_id: listId })}
+              onClick={() => { }}
+            >
+              take a ticket
+            </button>
+          )}
+        </div>
+        <ol>
+          {queuedTokens.map((token) => (
+            <li
+              className="not-last:mb-0.5 before:content-['--'] before:mr-1"
+              key={token.id}
+            >
+              {token.client_name}
+              <span className="text-neutral-600 text-sm ml-1">#{token.id}</span>
+            </li>
+          ))}
+        </ol>
       </div>
-      <ol>
-        {queuedTokens.map((token) => (
-          <li
-            className="not-last:mb-0.5 before:content-['--'] before:mr-1"
-            key={token.id}
-          >
-            {token.client_name}
-            <span className="text-neutral-600 text-sm ml-1">#{token.id}</span>
-          </li>
-        ))}
-      </ol>
-    </div>
-  );
-});
+    );
+  },
+);
 
 // -----------------------------------------------------------------------------
 // AdminActions - Admin-only buttons
 // -----------------------------------------------------------------------------
 
 interface AdminActionsProps {
-  onGenerateSlots: () => void;
-  onDeleteList: () => void;
+  list: WaitingList;
+  managmentSecret: string;
 }
 
-const AdminActions = memo(function AdminActions({
-  onGenerateSlots,
-  onDeleteList,
-}: AdminActionsProps) {
+const AdminActions = memo(({ list, managmentSecret }: AdminActionsProps) => {
+  const [isModalSlotOpen, setIsModalSlotOpen] = useState(false);
+  const { mutate: deleteList } = useDeleteList();
   return (
-    <div className="flex flex-wrap gap-2">
-      <button
-        type="button"
-        className="btn-secondary w-fit"
-        onClick={onGenerateSlots}
-      >
-        Generate slots
-      </button>
-      <button
-        type="button"
-        className="btn-secondary w-fit"
-        onClick={onDeleteList}
-      >
-        Delete list
-      </button>
-    </div>
+    <>
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          className="btn-secondary w-fit"
+          onClick={() => setIsModalSlotOpen(true)}
+        >
+          Generate slots
+        </button>
+        <button
+          type="button"
+          className="btn-secondary w-fit"
+          onClick={() => deleteList(managmentSecret)}
+        >
+          Delete list
+        </button>
+      </div>
+      <GenSlotModal
+        isOpen={isModalSlotOpen}
+        onClose={() => setIsModalSlotOpen(false)}
+        listId={list.id}
+        listName={list.name}
+        listSecret={managmentSecret}
+      />
+    </>
   );
 });
 
@@ -206,14 +243,16 @@ const AdminActions = memo(function AdminActions({
 // -----------------------------------------------------------------------------
 
 interface SlotsByDaySectionProps {
-  slotsByDay: Array<[string, SlotData[]]>;
+  slots: SlotData[];
   listId: number;
 }
 
-const SlotsByDaySection = memo(function SlotsByDaySection({
-  slotsByDay,
-  listId,
-}: SlotsByDaySectionProps) {
+const SlotsByDaySection = memo(({ listId, slots }: SlotsByDaySectionProps) => {
+  const slotsByDay = useMemo(() => {
+    const groupedSlots = groupSlotsByLocalStartDateSorted(slots);
+    return Object.entries(groupedSlots).sort(([a], [b]) => a.localeCompare(b));
+  }, [slots]);
+
   return (
     <>
       {slotsByDay.map(([day, slots]) => (
@@ -235,10 +274,13 @@ interface SlotsGridProps {
   listId: number;
 }
 
-const SlotsGrid = memo(function SlotsGrid({ slots, listId }: SlotsGridProps) {
-  const { setRegisteringFor, onUnregister, unregisteringSecret } =
-    useRegistration();
-  const { tokens, registeredSlotIds } = useListRegistration(listId);
+const SlotsGrid = memo(({ slots, listId }: SlotsGridProps) => {
+  const [persistent] = usePersistent();
+
+  const tokens = persistent.forList(listId);
+  const registeredSlotIds = tokens
+    .map((t) => t.slot_id)
+    .filter((id): id is number => id !== null);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 xl:grid-cols-5 gap-1">
@@ -251,9 +293,7 @@ const SlotsGrid = memo(function SlotsGrid({ slots, listId }: SlotsGridProps) {
             key={slot.id}
             slot={slot}
             variant={variant}
-            onRegister={variant === "open" ? setRegisteringFor : undefined}
-            onUnregister={token ? () => onUnregister(token.secret) : undefined}
-            isUnregistering={token?.secret === unregisteringSecret}
+            secret={token?.secret}
           />
         );
       })}
@@ -272,39 +312,38 @@ interface OpenedTimeIntervalProps {
   endVerb: string;
 }
 
-function OpenedTimeInterval({
-  start,
-  end,
-  startVerb,
-  endVerb,
-}: OpenedTimeIntervalProps) {
-  if (start && end) {
-    if (start.getDate() === end.getDate()) {
+const OpenedTimeInterval = memo(
+  ({ start, end, startVerb, endVerb }: OpenedTimeIntervalProps) => {
+    if (start && end) {
+      if (start.getDate() === end.getDate()) {
+        return (
+          <>
+            <span>{`${absoluteDateFormatter.format(start)} `}</span>
+            <span>{`between ${absoluteTimeFormatter.format(start)} `}</span>
+            <span>{`and ${absoluteTimeFormatter.format(end)}`}</span>
+          </>
+        );
+      }
       return (
         <>
-          <span>{`${absoluteDateFormatter.format(start)} `}</span>
-          <span>{`between ${absoluteTimeFormatter.format(start)} `}</span>
-          <span>{`and ${absoluteTimeFormatter.format(end)}`}</span>
+          <span>{`between ${absoluteDateTimeFormatter.format(start)}`}</span>
+          <span>{` and ${absoluteDateTimeFormatter.format(end)}`}</span>
         </>
       );
     }
-    return (
-      <>
-        <span>{`between ${absoluteDateTimeFormatter.format(start)}`}</span>
-        <span>{` and ${absoluteDateTimeFormatter.format(end)}`}</span>
-      </>
-    );
-  }
 
-  if (start) {
-    return (
-      <span>{`${startVerb} ${absoluteDateTimeFormatter.format(start)}`}</span>
-    );
-  }
+    if (start) {
+      return (
+        <span>{`${startVerb} ${absoluteDateTimeFormatter.format(start)}`}</span>
+      );
+    }
 
-  if (end) {
-    return <span>{`${endVerb} ${absoluteDateTimeFormatter.format(end)}`}</span>;
-  }
+    if (end) {
+      return (
+        <span>{`${endVerb} ${absoluteDateTimeFormatter.format(end)}`}</span>
+      );
+    }
 
-  return <span>unknown start or end time</span>;
-}
+    return <span>unknown start or end time</span>;
+  },
+);

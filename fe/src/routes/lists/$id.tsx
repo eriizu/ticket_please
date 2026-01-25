@@ -1,5 +1,6 @@
-import { SingleWaitingList } from "@/components/WaitingList";
 import { createFileRoute, redirect } from "@tanstack/react-router";
+import { SingleWaitingList } from "@/components/WaitingList";
+import { useWaitingList } from "@/hooks/useWaitingLists";
 
 export const Route = createFileRoute("/lists/$id")({
   beforeLoad: async ({ params }) => {
@@ -30,8 +31,22 @@ export const Route = createFileRoute("/lists/$id")({
 });
 
 function RouteComponent() {
-  return <div>
-  <div>Hello "/lists/$id"!</div>
-    <SingleWaitingList/>
-  </div>;
+  const { id } = Route.useParams();
+  const { data: list, isLoading, isError } = useWaitingList(id);
+
+  if (isLoading) {
+    return <div>Loading</div>;
+  }
+  if (isError) {
+    return <div>Error</div>;
+  }
+
+  if (list) {
+    return (
+      <div>
+        <div>Hello "/lists/$id"!</div>
+        <SingleWaitingList list={list} listManagmentSecret={null} />
+      </div>
+    );
+  }
 }

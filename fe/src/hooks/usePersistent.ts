@@ -1,5 +1,5 @@
 import * as models from "../models";
-import { useLocalStorage } from "@/hooks/localStorage";
+import { useLocalStorage, getFromLocalStorage } from "@/hooks/localStorage";
 
 export function usePersistent() {
   return useLocalStorage(
@@ -11,4 +11,8 @@ export function usePersistent() {
     }),
     models.PersistentStorage.fromRaw,
   );
+}
+
+export function getPersistentFromLocalStorage() {
+  return getFromLocalStorage("persistent", models.PersistentStorage.fromRaw);
 }

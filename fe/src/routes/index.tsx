@@ -4,7 +4,10 @@ import { useState } from "react";
 import { NewListModal } from "@/components/NewListModal";
 import { RegisterModal } from "@/components/RegisterModal";
 import { TokenSumary } from "@/components/TokenSumary";
-import { SingleWaitingList, SingleWaitingListContainer } from "@/components/WaitingList";
+import {
+  SingleWaitingList,
+  SingleWaitingListContainer,
+} from "@/components/WaitingList";
 import {
   type Registration,
   RegistrationProvider,
@@ -51,7 +54,7 @@ function ManyWaitingList() {
     null,
   );
   const [persistent, setPersistent] = usePersistent();
-  const unregisterMutation = useUnregisterToken(persistent, setPersistent);
+  const unregisterMutation = useUnregisterToken();
 
   if (isPending)
     return (
