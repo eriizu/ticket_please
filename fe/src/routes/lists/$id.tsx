@@ -1,3 +1,4 @@
+import { SingleWaitingList } from "@/components/WaitingList";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/lists/$id")({
@@ -29,5 +30,8 @@ export const Route = createFileRoute("/lists/$id")({
 });
 
 function RouteComponent() {
-  return <div>Hello "/lists/$id"!</div>;
+  return <div>
+  <div>Hello "/lists/$id"!</div>
+    <SingleWaitingList/>
+  </div>;
 }
