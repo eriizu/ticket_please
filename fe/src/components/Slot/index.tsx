@@ -39,13 +39,14 @@ interface SlotProps {
   slot: SlotData;
   variant: SlotVariant;
   secret?: string;
+  invite?: string;
 }
 
 /**
  * Main Slot component that routes to the appropriate variant.
  * Use this component when you need dynamic variant selection.
  */
-export const Slot = memo(({ slot, variant, secret }: SlotProps) => {
+export const Slot = memo(({ slot, invite, variant, secret }: SlotProps) => {
   switch (variant) {
     case "mine":
       return <SlotMine slot={slot} secret={secret} />;
@@ -53,6 +54,6 @@ export const Slot = memo(({ slot, variant, secret }: SlotProps) => {
       return <SlotTaken slot={slot} />;
     case "open":
     case "open-muted":
-      return <SlotOpen slot={slot} variant={variant as SlotOpenVariant} />;
+      return <SlotOpen slot={slot} variant={variant as SlotOpenVariant}  invite={invite} />;
   }
 });

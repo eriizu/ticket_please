@@ -2,7 +2,15 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import { SingleWaitingList } from "@/components/WaitingList";
 import { useWaitingList } from "@/hooks/useWaitingLists";
 
+interface ListSearchParams {
+  invite_code?: string;
+}
+
 export const Route = createFileRoute("/lists/$id")({
+  validateSearch: (search: Record<string, unknown>): ListSearchParams => ({
+    invite_code:
+      typeof search.invite_code === "string" ? search.invite_code : undefined,
+  }),
   beforeLoad: async ({ params }) => {
     const { id } = params;
     const isNumericId = id.trim() !== "" && !Number.isNaN(Number(id));
@@ -32,6 +40,7 @@ export const Route = createFileRoute("/lists/$id")({
 
 function RouteComponent() {
   const { id } = Route.useParams();
+  const search = Route.useSearch();
   const { data: list, isLoading, isError } = useWaitingList(id);
 
   if (isLoading) {
@@ -44,8 +53,10 @@ function RouteComponent() {
   if (list) {
     return (
       <div>
-        <div>Hello "/lists/$id"!</div>
-        <SingleWaitingList list={list} listManagmentSecret={null} />
+        <SingleWaitingList
+          list={list}
+          listManagmentSecret={null} invite={search.invite_code}
+        />
       </div>
     );
   }

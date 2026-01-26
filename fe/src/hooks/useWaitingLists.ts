@@ -81,3 +81,38 @@ export function useWaitingList(id_or_sercret: string | number) {
     },
   });
 }
+
+export function useWaitingListInvite(secret: string) {
+  const queryClient = useQueryClient();
+  const queryKey = [...LIST_QUERY_KEY, secret, "invite"];
+
+  return useQuery({
+    queryKey,
+    staleTime: 60 * 1000,
+    retry: 3,
+    select: ({ _etag, ...data }) => data,
+    queryFn: async () => {
+      const cached =
+        queryClient.getQueryData<WithETag<typeof models.WaitingListInvite.infer>>(queryKey);
+      const result = await fetchWithETag<typeof models.WaitingListInvite.infer>(
+        `/api/list/${secret}/invite`,
+        cached,
+      );
+
+      // Skip validation if data unchanged (304)
+      if (cached && result === cached) {
+        return result;
+      }
+
+      // Validate and transform new data
+      const parsed = models.WaitingListInvite(result);
+      if (parsed instanceof type.errors) {
+        console.error(parsed);
+        throw parsed;
+      }
+
+      // Preserve ETag on validated data
+      return Object.assign(parsed, { _etag: result._etag });
+    },
+  });
+}

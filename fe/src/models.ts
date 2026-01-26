@@ -27,6 +27,11 @@ export const WaitingListBase = type({
   opens_at: "string.date.parse | null",
 });
 
+export const WaitingListInvite = type({
+   invite_code: "string | null",
+});
+
+
 export const SlotRelated = SlotBase.merge({
   list: WaitingListBase,
   token: WaitingTokenBase.or("null"),

@@ -38,11 +38,7 @@ export function RegisterModal(props: {
     isPending,
     status,
     mutate: registerOnList,
-  } = useRegisterOnList(
-    {
-      list_id: props.registeringFor.list_id,
-      slot_id: props.registeringFor.slot_id,
-    },
+  } = useRegisterOnList(props.registeringFor,
     storage,
     setStorage,
   );

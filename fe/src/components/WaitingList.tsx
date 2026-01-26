@@ -1,10 +1,11 @@
 import { memo, useMemo, useState } from "react";
 import { GenSlotModal } from "@/components/GenSlotModal";
 import { getSlotVariant, Slot } from "@/components/Slot";
-import type {
-  Registration,
-} from "@/contexts/RegistrationContext";
+import type { Registration } from "@/contexts/RegistrationContext";
 import { useDeleteList } from "@/hooks/useDeleteList";
+import { usePersistent } from "@/hooks/usePersistent";
+import { useUnregisterToken } from "@/hooks/useUnregisterToken";
+import { useWaitingListInvite } from "@/hooks/useWaitingLists";
 import {
   absoluteDateFormatter,
   absoluteDateTimeFormatter,
@@ -12,8 +13,6 @@ import {
 } from "@/utils/formatters";
 import { groupSlotsByLocalStartDateSorted } from "@/utils/slots";
 import type * as models from "../models";
-import { useUnregisterToken } from "@/hooks/useUnregisterToken";
-import { usePersistent } from "@/hooks/usePersistent";
 import { RegisterModal } from "./RegisterModal";
 
 type WaitingList = typeof models.WaitingListRelated.infer;
@@ -68,10 +67,11 @@ interface SingleWaitingList1Props {
 interface SingleWaitingListProps {
   list: WaitingList;
   listManagmentSecret: string | null;
+  invite?: string;
 }
 
 export const SingleWaitingList = memo(
-  ({ list, listManagmentSecret }: SingleWaitingListProps) => {
+  ({ list, listManagmentSecret, invite }: SingleWaitingListProps) => {
     const [persistent] = usePersistent();
 
     const registeredTokens = persistent.forList(list.id);
@@ -106,14 +106,14 @@ export const SingleWaitingList = memo(
         <QueueSection
           listId={list.id}
           queuedTokens={queueState.queuedTokens}
-          mySecret={queueState.mySecret}
+          mySecret={queueState.mySecret} invite={invite}
         />
 
         {listManagmentSecret && (
           <AdminActions list={list} managmentSecret={listManagmentSecret} />
         )}
 
-        <SlotsByDaySection slots={list.slots} listId={list.id} />
+        <SlotsByDaySection slots={list.slots} listId={list.id}  invite={invite}/>
       </SingleWaitingListContainer>
     );
   },
@@ -147,10 +147,11 @@ interface QueueSectionProps {
   listId: number;
   queuedTokens: WaitingToken[];
   mySecret?: string;
+  invite?: string;
 }
 
 const QueueSection = memo(
-  ({ listId, queuedTokens, mySecret }: QueueSectionProps) => {
+  ({ listId, queuedTokens, mySecret, invite }: QueueSectionProps) => {
     const [registeringFor, setRegisteringFor] = useState<Registration | null>(
       null,
     );
@@ -163,7 +164,7 @@ const QueueSection = memo(
           {mySecret ? (
             <button
               type="button"
-              className="before:content-['x'] before:mr-1 btn-secondary"
+              className="before:content-['✕'] before:mr-1 btn-secondary"
               onClick={() => {
                 unregister(mySecret);
               }}
@@ -175,7 +176,7 @@ const QueueSection = memo(
             <button
               type="button"
               className="before:content-['→'] before:mr-1 btn-secondary"
-              onClick={() => setRegisteringFor({ list_id: listId })}
+              onClick={() => setRegisteringFor({ list_id: listId, invite })}
             >
               take a ticket
             </button>
@@ -184,7 +185,7 @@ const QueueSection = memo(
         <ol>
           {queuedTokens.map((token) => (
             <li
-              className="not-last:mb-0.5 before:content-['--'] before:mr-1"
+              className="not-last:mb-0.5 before:content-['—'] before:mr-1"
               key={token.id}
             >
               {token.client_name}
@@ -232,6 +233,7 @@ const AdminActions = memo(({ list, managmentSecret }: AdminActionsProps) => {
         >
           Delete list
         </button>
+        <Invite managmentSecret={managmentSecret} />
       </div>
       <GenSlotModal
         isOpen={isModalSlotOpen}
@@ -244,6 +246,42 @@ const AdminActions = memo(({ list, managmentSecret }: AdminActionsProps) => {
   );
 });
 
+const Invite = ({ managmentSecret }: { managmentSecret: string }) => {
+  const { data: invite, isFetching: inviteIsFecting } =
+    useWaitingListInvite(managmentSecret);
+  const [copied, setCopied] = useState(false);
+  if (inviteIsFecting) {
+    return <>Fetching invite</>;
+  }
+  if (invite) {
+    const inviteCode = invite.invite_code;
+    if (!inviteCode) {
+      return <>No invite link</>;
+    }
+    const invitePath = `/lists/${inviteCode}`;
+    const inviteLink = `${window.location.origin}${invitePath}`;
+    const displayCode =
+      inviteCode.length > 10
+        ? `${inviteCode.slice(0, 6)}...${inviteCode.slice(-4)}`
+        : inviteCode;
+    return (
+      <button
+        type="button"
+        className="btn-secondary w-45"
+        onClick={() => {
+          void navigator.clipboard.writeText(inviteLink);
+          setCopied(true);
+          window.setTimeout(() => setCopied(false), 1000);
+        }}
+        title="Copy full invite link"
+      >
+        invite: {copied ? "copied" : displayCode}
+      </button>
+    );
+  }
+  return <>No invite link</>;
+};
+
 // -----------------------------------------------------------------------------
 // SlotsByDaySection - Groups slots by day
 // -----------------------------------------------------------------------------
@@ -251,9 +289,10 @@ const AdminActions = memo(({ list, managmentSecret }: AdminActionsProps) => {
 interface SlotsByDaySectionProps {
   slots: SlotData[];
   listId: number;
+  invite?: string;
 }
 
-const SlotsByDaySection = memo(({ listId, slots }: SlotsByDaySectionProps) => {
+const SlotsByDaySection = memo(({ listId, invite, slots }: SlotsByDaySectionProps) => {
   const slotsByDay = useMemo(() => {
     const groupedSlots = groupSlotsByLocalStartDateSorted(slots);
     return Object.entries(groupedSlots).sort(([a], [b]) => a.localeCompare(b));
@@ -264,7 +303,7 @@ const SlotsByDaySection = memo(({ listId, slots }: SlotsByDaySectionProps) => {
       {slotsByDay.map(([day, slots]) => (
         <div key={day}>
           <h3 className="font-semibold">{day}</h3>
-          <SlotsGrid slots={slots} listId={listId} />
+          <SlotsGrid slots={slots} listId={listId}  invite={invite}/>
         </div>
       ))}
     </>
@@ -278,9 +317,10 @@ const SlotsByDaySection = memo(({ listId, slots }: SlotsByDaySectionProps) => {
 interface SlotsGridProps {
   slots: SlotData[];
   listId: number;
+  invite?: string;
 }
 
-const SlotsGrid = memo(({ slots, listId }: SlotsGridProps) => {
+const SlotsGrid = memo(({ slots, listId, invite }: SlotsGridProps) => {
   const [persistent] = usePersistent();
 
   const tokens = persistent.forList(listId);
@@ -300,6 +340,7 @@ const SlotsGrid = memo(({ slots, listId }: SlotsGridProps) => {
             slot={slot}
             variant={variant}
             secret={token?.secret}
+ invite={invite}
           />
         );
       })}
