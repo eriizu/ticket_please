@@ -27,6 +27,11 @@ export const WaitingListBase = type({
   opens_at: "string.date.parse | null",
 });
 
+export const WaitingListInvite = type({
+   invite_code: "string | null",
+});
+
+
 export const SlotRelated = SlotBase.merge({
   list: WaitingListBase,
   token: WaitingTokenBase.or("null"),
@@ -70,8 +75,7 @@ const KnownLists = type("unknown").narrow(
       return false;
     }
     return Object.entries(value).every(
-      ([key, val]) =>
-        Number.isInteger(Number(key)) && typeof val === "string",
+      ([key, val]) => Number.isInteger(Number(key)) && typeof val === "string",
     );
   },
 );
@@ -80,6 +84,7 @@ export const PersistentStorageSchema = type({
   known_tokens: KnownToken.array(),
   "known_lists?": KnownLists,
   last_used_name: "string | null",
+  "list_master?": "string",
 });
 
 export class PersistentStorage {
@@ -88,15 +93,18 @@ export class PersistentStorage {
   known_lists: {
     [id: number]: string;
   };
+  list_master: string | null;
 
   constructor(
     last_used_name: string | null,
     known_tokens?: (typeof KnownToken.infer)[],
     known_lists?: { [id: number]: string },
+    list_master?: string | null,
   ) {
     this.known_tokens = known_tokens || [];
     this.last_used_name = last_used_name;
     this.known_lists = known_lists || {};
+    this.list_master = list_master || null;
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: data is about to be parsed and checked
@@ -104,12 +112,13 @@ export class PersistentStorage {
     const parsed = PersistentStorageSchema(raw);
     if (parsed instanceof type.errors) {
       console.error(parsed.toString());
-      return new PersistentStorage(null, [], {});
+      return new PersistentStorage(null, [], {}, null);
     }
     return new PersistentStorage(
       parsed.last_used_name,
       parsed.known_tokens,
       parsed.known_lists ?? {},
+      parsed.list_master ?? null,
     );
   }
 

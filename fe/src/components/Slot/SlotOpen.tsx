@@ -1,8 +1,9 @@
-import { memo } from "react";
+import { memo, useState } from "react";
 import type { Registration } from "@/contexts/RegistrationContext";
 import { absoluteTimeFormatter } from "@/utils/formatters";
 import type * as models from "../../models";
 import { SlotBase } from "./SlotBase";
+import { RegisterModal } from "../RegisterModal";
 
 type SlotData = typeof models.SlotBase.infer;
 
@@ -11,7 +12,7 @@ export type SlotOpenVariant = "open" | "open-muted";
 interface SlotOpenProps {
   slot: SlotData;
   variant: SlotOpenVariant;
-  onRegister?: (reg: Registration) => void;
+  invite?: string;
 }
 
 function getStatusDisplay(
@@ -34,15 +35,14 @@ function getStatusDisplay(
  * - "open" variant: fully available, shows register button
  * - "open-muted" variant: available but user already has a slot, muted styling
  */
-export const SlotOpen = memo(function SlotOpen({
-  slot,
-  variant,
-  onRegister,
-}: SlotOpenProps) {
+export const SlotOpen = memo(({ slot,invite, variant }: SlotOpenProps) => {
   const isPast = slot.starts_at <= new Date();
   const status = getStatusDisplay(variant, isPast);
-  const canRegister = variant === "open" && !isPast && onRegister;
-
+  const canRegister = variant === "open" && !isPast;
+  // const registration: Registration =
+  const [registeringFor, setRegisteringFor] = useState<Registration | null>(
+    null,
+  );
   return (
     <SlotBase>
       <div className="w-20 flex-none">
@@ -59,13 +59,19 @@ export const SlotOpen = memo(function SlotOpen({
             type="button"
             className='btn-secondary before:content-["+"] before:mr-1'
             onClick={() =>
-              onRegister({ slot_id: slot.id, list_id: slot.list_id })
+              setRegisteringFor({ slot_id: slot.id, list_id: slot.list_id , invite})
             }
           >
             register
           </button>
         )}
       </div>
+      {registeringFor && (
+        <RegisterModal
+          onClose={() => setRegisteringFor(null)}
+          registeringFor={registeringFor}
+        />
+      )}
     </SlotBase>
   );
 });

@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import * as models from "../models";
 import { useLocalStorage } from "@/hooks/localStorage";
 import { type } from "arktype";
+import type { Registration } from "@/contexts/RegistrationContext";
 
 const RegistrationResponse = models.WaitingTokenBase.merge({
   secret: "string",
@@ -10,14 +11,14 @@ const RegistrationResponse = models.WaitingTokenBase.merge({
 });
 
 export function useRegisterOnList(
-  registration: { list_id: number; slot_id?: number },
+  registration: Registration,
   storage: models.PersistentStorage,
   setStorage: (val: models.PersistentStorage) => void,
 ) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (client_name: string) => {
-      const res = await fetch(`/api/list/${registration.list_id}/reg`, {
+      const res = await fetch(`/api/list/${registration.list_id}/reg${(registration.invite) ? `?invite_code=${registration.invite}` : ""}`, {
         method: "POST",
         body: JSON.stringify({
           client_name: client_name,

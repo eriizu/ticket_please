@@ -22,6 +22,12 @@ pub struct WaitingListWithSecretDto {
     #[serde(flatten)]
     pub base: WaitingListBaseDto,
     pub secret: String,
+    pub invite_code: Option<String>,
+}
+
+#[derive(serde::Serialize)]
+pub struct WaitingListInviteDto {
+    pub invite_code: Option<String>,
 }
 
 impl From<crate::db::WaitingList> for WaitingListBaseDto {
@@ -45,6 +51,7 @@ impl From<crate::db::WaitingList> for WaitingListWithSecretDto {
                 closes_at: w.wlist_closes_at,
             },
             secret: w.wlist_secret,
+            invite_code: w.wlist_invite_code,
         }
     }
 }
@@ -54,6 +61,30 @@ pub struct CreateWaitingListDto {
     pub name: String,
     pub opens_at: Option<DateTime<FixedOffset>>,
     pub closes_at: Option<DateTime<FixedOffset>>,
+}
+
+#[derive(serde::Serialize)]
+pub struct ListMasterWithSecretDto {
+    pub id: i32,
+    pub name: String,
+    pub parent_id: Option<i32>,
+    pub secret: String,
+}
+
+impl From<crate::db::ListMaster> for ListMasterWithSecretDto {
+    fn from(src: crate::db::ListMaster) -> Self {
+        Self {
+            id: src.lm_id,
+            name: src.lm_name,
+            parent_id: src.lm_parent,
+            secret: src.lm_secret,
+        }
+    }
+}
+
+#[derive(serde::Deserialize)]
+pub struct CreateListMasterDto {
+    pub name: String,
 }
 
 #[derive(serde::Deserialize)]

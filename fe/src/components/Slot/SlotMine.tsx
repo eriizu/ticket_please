@@ -1,27 +1,33 @@
-import { memo, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import { absoluteTimeFormatter } from "@/utils/formatters";
 import type * as models from "../../models";
 import { SlotBase } from "./SlotBase";
 import { UnregisterModal } from "./UnregisterModal";
+import { useUnregisterToken } from "@/hooks/useUnregisterToken";
 
 type SlotData = typeof models.SlotBase.infer;
 
 interface SlotMineProps {
   slot: SlotData;
-  onUnregister: () => void;
-  isUnregistering: boolean;
+  secret?: string;
 }
 
 /**
  * Displays a slot that belongs to the current user.
  * Clickable button that opens an unregister confirmation modal.
  */
-export const SlotMine = memo(function SlotMine({
-  slot,
-  onUnregister,
-  isUnregistering,
-}: SlotMineProps) {
+export const SlotMine = memo(({ slot, secret }: SlotMineProps) => {
   const [aboutToUnregister, setAboutToUnregister] = useState(false);
+  const [isUnregistering, setIsUnregistering] = useState(false);
+  const { mutate: unregister, isSuccess, reset } = useUnregisterToken();
+
+  // TODO: figure out if this is acutally necessary
+  useEffect(() => {
+    if (isSuccess) {
+      setIsUnregistering(false);
+      reset();
+    }
+  }, [isSuccess, reset]);
 
   return (
     <button
@@ -48,12 +54,17 @@ export const SlotMine = memo(function SlotMine({
         <div className="hidden group-hover:flex w-full items-center justify-center text-neutral-600">
           {isUnregistering ? "unregistering..." : "click to unregister"}
         </div>
-        <UnregisterModal
-          isOpen={aboutToUnregister}
-          onClose={() => setAboutToUnregister(false)}
-          onConfirm={onUnregister}
-          isUnregistering={isUnregistering}
-        />
+        {secret && (
+          <UnregisterModal
+            isOpen={aboutToUnregister}
+            onClose={() => setAboutToUnregister(false)}
+            onConfirm={() => {
+              unregister(secret);
+              setIsUnregistering(true);
+            }}
+            isUnregistering={isUnregistering}
+          />
+        )}
       </SlotBase>
     </button>
   );

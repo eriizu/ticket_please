@@ -11,7 +11,9 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as PruneRouteImport } from './routes/prune'
 import { Route as OldRouteImport } from './routes/old'
+import { Route as MeRouteImport } from './routes/me'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ListsIdRouteImport } from './routes/lists/$id'
 
 const PruneRoute = PruneRouteImport.update({
   id: '/prune',
@@ -23,40 +25,58 @@ const OldRoute = OldRouteImport.update({
   path: '/old',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MeRoute = MeRouteImport.update({
+  id: '/me',
+  path: '/me',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ListsIdRoute = ListsIdRouteImport.update({
+  id: '/lists/$id',
+  path: '/lists/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/me': typeof MeRoute
   '/old': typeof OldRoute
   '/prune': typeof PruneRoute
+  '/lists/$id': typeof ListsIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/me': typeof MeRoute
   '/old': typeof OldRoute
   '/prune': typeof PruneRoute
+  '/lists/$id': typeof ListsIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/me': typeof MeRoute
   '/old': typeof OldRoute
   '/prune': typeof PruneRoute
+  '/lists/$id': typeof ListsIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/old' | '/prune'
+  fullPaths: '/' | '/me' | '/old' | '/prune' | '/lists/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/old' | '/prune'
-  id: '__root__' | '/' | '/old' | '/prune'
+  to: '/' | '/me' | '/old' | '/prune' | '/lists/$id'
+  id: '__root__' | '/' | '/me' | '/old' | '/prune' | '/lists/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  MeRoute: typeof MeRoute
   OldRoute: typeof OldRoute
   PruneRoute: typeof PruneRoute
+  ListsIdRoute: typeof ListsIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -75,6 +95,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OldRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/me': {
+      id: '/me'
+      path: '/me'
+      fullPath: '/me'
+      preLoaderRoute: typeof MeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -82,13 +109,22 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/lists/$id': {
+      id: '/lists/$id'
+      path: '/lists/$id'
+      fullPath: '/lists/$id'
+      preLoaderRoute: typeof ListsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  MeRoute: MeRoute,
   OldRoute: OldRoute,
   PruneRoute: PruneRoute,
+  ListsIdRoute: ListsIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

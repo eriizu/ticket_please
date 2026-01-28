@@ -2,8 +2,9 @@ import { memo } from "react";
 import type { Registration } from "@/contexts/RegistrationContext";
 import type * as models from "../../models";
 import { SlotMine } from "./SlotMine";
-import { SlotOpen, type SlotOpenVariant } from "./SlotOpen";
+import { type SlotOpenVariant } from "./SlotOpen";
 import { SlotTaken } from "./SlotTaken";
+import { SlotOpen } from "./SlotOpen";
 
 // Re-export for convenience
 export { SlotBase } from "./SlotBase";
@@ -37,41 +38,22 @@ export function getSlotVariant(
 interface SlotProps {
   slot: SlotData;
   variant: SlotVariant;
-  onRegister?: (reg: Registration) => void;
-  onUnregister?: () => void;
-  isUnregistering?: boolean;
+  secret?: string;
+  invite?: string;
 }
 
 /**
  * Main Slot component that routes to the appropriate variant.
  * Use this component when you need dynamic variant selection.
  */
-export const Slot = memo(function Slot({
-  slot,
-  variant,
-  onRegister,
-  onUnregister,
-  isUnregistering = false,
-}: SlotProps) {
+export const Slot = memo(({ slot, invite, variant, secret }: SlotProps) => {
   switch (variant) {
     case "mine":
-      return (
-        <SlotMine
-          slot={slot}
-          onUnregister={onUnregister ?? (() => {})}
-          isUnregistering={isUnregistering}
-        />
-      );
+      return <SlotMine slot={slot} secret={secret} />;
     case "taken":
       return <SlotTaken slot={slot} />;
     case "open":
     case "open-muted":
-      return (
-        <SlotOpen
-          slot={slot}
-          variant={variant as SlotOpenVariant}
-          onRegister={onRegister}
-        />
-      );
+      return <SlotOpen slot={slot} variant={variant as SlotOpenVariant}  invite={invite} />;
   }
 });

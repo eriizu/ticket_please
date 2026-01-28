@@ -1,11 +1,18 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import * as models from "../models";
 import { type } from "arktype";
+import * as models from "../models";
 
 const ListCreate = models.WaitingListBase.pick("name", "opens_at", "closes_at");
 const WaitingListWithSecret = models.WaitingListBase.merge({
   secret: "string",
 });
+
+export class MissingListMasterError extends Error {
+  constructor() {
+    super("List master secret is required to create a waiting list");
+    this.name = "MissingListMasterError";
+  }
+}
 
 export function useCreateList(
   storage: models.PersistentStorage,
@@ -14,14 +21,23 @@ export function useCreateList(
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (args: typeof ListCreate.infer) => {
-      const res = await fetch("/api/list", {
+      if (!storage.list_master) {
+        throw new MissingListMasterError();
+      }
+      const url = `/api/list?master=${encodeURIComponent(storage.list_master)}`;
+      const res = await fetch(url, {
         method: "POST",
         body: JSON.stringify(args),
         headers: {
           "Content-Type": "application/json",
         },
       });
-      if (res.status < 200 && res.status > 299) {
+      if (res.status === 404) {
+        throw new Error("Invalid list master secret", {
+          cause: await res.text(),
+        });
+      }
+      if (res.status < 200 || res.status > 299) {
         throw new Error("request failed", { cause: await res.text() });
       }
       const parsedBody = WaitingListWithSecret(await res.json());

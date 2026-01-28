@@ -2,13 +2,14 @@
 
 Guidelines for agentic coding agents working on ticket_please.
 
-## Project Overview
+# Project Overview
 
 Ticket management system for student follow-ups. Two deliverables:
 - **Backend (be/)**: Rust + Poem + sqlx + PostgreSQL
 - **Frontend (fe/)**: React + Bun + TanStack Query/Router + ArkType + Tailwind
 
-## Backend Commands (Rust)
+# Backend (Rust)
+## Commands
 
 Run from `be/` directory:
 
@@ -26,30 +27,10 @@ cargo test -- --nocapture      # Show println! output
 
 # Database
 sqlx migrate add "name"        # Create migration
-sqlx migrate run               # Run pending migrations
+sqlx migrate run               # Run pending migrations, do not run them yourself, but you can prompt me to.
 ```
 
-## Frontend Commands (TypeScript/React)
-
-Run from `fe/` directory:
-
-```bash
-# Build & Run
-bun dev                        # Dev server on port 3001
-bun run build                  # Production build (vite + tsc)
-
-# Testing
-bun run test                   # All tests (vitest)
-bun run test component         # Tests matching "component"
-bun run test -- --reporter=verbose
-
-# Linting & Formatting
-bun run format                 # Format (biome)
-bun run lint                   # Lint (biome)
-bun run check                  # Full check: format + lint + typecheck
-```
-
-## Backend Code Style (Rust)
+## Code Style
 
 ### Imports
 
@@ -79,18 +60,29 @@ pub enum HandlerError {
 }
 ```
 
-### Naming & Types
-
-- snake_case: variables, functions, modules
-- PascalCase: types, traits, enums
-- Explicit return types on public functions
-- `Arc<T>` for shared ownership across async tasks
-
 ### Tests
 
-Place in `#[cfg(test)]` mod blocks. Use descriptive names: `fn test_generate_rq_str_with_where()`.
+Tests are in `#[cfg(test)]` mod blocks.
 
-## Frontend Code Style (TypeScript/React)
+# Frontend (TypeScript/React)
+
+## Commands
+
+Run from `fe/` directory:
+
+```bash
+# Build & Run
+bun run build                  # Production build (vite + tsc)
+bun dev                        # Dev server on port 3001, do not run it yourself, I already have a dev server runing
+
+# Linting & Formatting
+bun run format                 # Format (biome)
+bun run lint                   # Lint (biome)
+bun run check                  # Full check: format + lint + typecheck
+```
+
+
+## Code Style
 
 ### Imports
 
@@ -162,7 +154,7 @@ export function useWaitingLists() {
 - Biome: spaces for indentation, double quotes for strings
 - Files excluded: `routeTree.gen.ts`, `styles.css`
 
-## Project Structure
+# Project Structure
 
 ```
 ticket_please/
@@ -170,8 +162,9 @@ ticket_please/
 │   ├── src/
 │   │   ├── main.rs           # Entry, setup
 │   │   ├── db.rs             # Repository, RepoError
-│   │   ├── db/               # wlist, wtoken, slot modules
-│   │   └── web_server.rs     # Routes, HandlerError
+│   │   ├── db/               # one module per entity
+│   │   ├── web_server.rs     # Routes, HandlerError
+│   │   └── web_server/       # dto, handlers
 │   └── migrations/
 ├── fe/
 │   ├── src/
@@ -185,7 +178,7 @@ ticket_please/
 └── Justfile                  # DB wipe/migration tasks
 ```
 
-## Key Patterns
+# Key Patterns
 
 **Backend error conversion** (`web_server.rs`):
 ```rust

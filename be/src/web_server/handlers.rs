@@ -9,12 +9,26 @@ pub async fn index() -> String {
     "Hello".to_owned()
 }
 
+/// Get a waiting list by either its numeric ID or its admin secret.
+/// If the path parameter parses as an i32, it's treated as an ID.
+/// Otherwise, it's treated as a secret string.
 #[poem::handler]
 pub async fn waiting_list_get(
-    Path(id): Path<i32>,
+    Path(id_or_secret): Path<String>,
     Data(repo): Data<&ArcRepo>,
 ) -> Result<Json<WaitingListWithRelatedDto>, HandlerError> {
-    let waiting_list = repo.get_waiting_list_by_id(id).await?;
+    let waiting_list = match id_or_secret.parse::<i32>() {
+        Ok(id) => repo.get_waiting_list_by_id(id).await?,
+        Err(_) => match repo.get_waiting_list_by_secret(&id_or_secret).await {
+            Err(crate::db::RepoError::NotFound { context: _ })
+            | Err(crate::db::RepoError::Sqlx {
+                error: sqlx::Error::RowNotFound,
+                context: _,
+            }) => repo.get_waiting_list_by_invite(&id_or_secret).await?,
+            x => x?,
+        },
+    };
+    let id = waiting_list.wlist_id;
     let tokens = repo
         .get_waiting_tokens_per_list(id)
         .await?
@@ -35,11 +49,60 @@ pub async fn waiting_list_get(
 }
 
 #[poem::handler]
+pub async fn waiting_list_invite_get(
+    Path(secret): Path<String>,
+    Data(repo): Data<&ArcRepo>,
+) -> Result<Json<WaitingListInviteDto>, HandlerError> {
+    let waiting_list = repo.get_waiting_list_by_secret(&secret).await?;
+    Ok(Json(WaitingListInviteDto {
+        invite_code: waiting_list.wlist_invite_code,
+    }))
+}
+
+#[poem::handler]
 pub async fn waiting_list_delete(
     Path(secret): Path<String>,
     Data(repo): Data<&ArcRepo>,
 ) -> Result<poem::http::StatusCode, HandlerError> {
     repo.delete_waiting_list(secret).await?;
+    Ok(poem::http::StatusCode::NO_CONTENT)
+}
+
+#[poem::handler]
+pub async fn list_master_child_create(
+    Path(parent_secret): Path<String>,
+    Data(repo): Data<&ArcRepo>,
+    Json(body): Json<CreateListMasterDto>,
+) -> Result<Json<ListMasterWithSecretDto>, HandlerError> {
+    let parent = repo.get_list_master_by_secret(&parent_secret).await?;
+    Ok(Json(
+        repo.create_list_master(&generate_secret()?, &body.name, Some(parent.lm_id))
+            .await?
+            .into(),
+    ))
+}
+
+#[derive(serde::Deserialize)]
+struct DeleteListMasterChildParams {
+    parent_secret: String,
+    child_id: i32,
+}
+
+#[poem::handler]
+pub async fn list_master_child_delete(
+    Path(params): Path<DeleteListMasterChildParams>,
+    Data(repo): Data<&ArcRepo>,
+) -> Result<poem::http::StatusCode, HandlerError> {
+    let parent = repo
+        .get_list_master_by_secret(&params.parent_secret)
+        .await?;
+    let child = repo.get_list_master_by_id(params.child_id).await?;
+    if child.lm_parent != Some(parent.lm_id) {
+        Err(HandlerError::Discrepancy {
+            context: "checking list master parent",
+        })?;
+    }
+    repo.delete_list_master(child.lm_secret).await?;
     Ok(poem::http::StatusCode::NO_CONTENT)
 }
 
@@ -73,6 +136,11 @@ struct GetManyListQuery {
     open: bool,
 }
 
+#[derive(serde::Deserialize)]
+struct WaitingListCreateQuery {
+    master: String,
+}
+
 #[poem::handler]
 pub async fn waiting_list_get_many(
     Query(query): Query<GetManyListQuery>,
@@ -104,15 +172,19 @@ pub async fn waiting_list_get_many(
 
 #[poem::handler]
 pub async fn waiting_list_create(
+    Query(query): Query<WaitingListCreateQuery>,
     Json(input): Json<CreateWaitingListDto>,
     Data(repo): Data<&ArcRepo>,
 ) -> Result<Json<WaitingListWithSecretDto>, HandlerError> {
+    let list_master = repo.get_list_master_by_secret(&query.master).await?;
     Ok(Json(
         repo.create_waiting_list(
+            &generate_secret()?,
             &generate_secret()?,
             &input.name,
             input.opens_at,
             input.closes_at,
+            list_master.lm_id,
         )
         .await?
         .into(),
@@ -132,9 +204,15 @@ pub async fn waiting_list_patch(
     ))
 }
 
+#[derive(serde::Deserialize)]
+struct WaitingTokenCreateQuery {
+    invite_code: Option<String>,
+}
+
 #[poem::handler]
 pub async fn waiting_token_create(
     Path(list_id): Path<i32>,
+    Query(query): Query<WaitingTokenCreateQuery>,
     Data(repo): Data<&ArcRepo>,
     body: Option<Json<AskWaitingTokenDto>>,
 ) -> Result<Json<WaitingTokenWithSecretDto>, HandlerError> {
@@ -143,6 +221,14 @@ pub async fn waiting_token_create(
         None => (None, None),
     };
     let waiting_list = repo.get_waiting_list_by_id(list_id).await?;
+    if let Some(invite_code) = waiting_list.wlist_invite_code.as_deref() {
+        if query.invite_code.as_deref() != Some(invite_code) {
+            Err(HandlerError::BadRequest {
+                why: "invalid invite code",
+                context: "waiting_token_create",
+            })?
+        }
+    }
     let mut est_turn_time = None;
     let mut slot = if let Some(slot_id) = slot_id {
         let slot = repo.get_slot_by_id(slot_id).await?;
@@ -194,10 +280,7 @@ pub async fn waiting_token_get(
 }
 
 fn generate_secret() -> Result<String, HandlerError> {
-    use base64::Engine as _;
-    let mut buf = [0u8; 32];
-    getrandom::fill(&mut buf).map_err(HandlerError::RandomGeneration)?;
-    Ok(base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(buf))
+    crate::util::generate_secret().map_err(HandlerError::RandomGeneration)
 }
 
 #[poem::handler]

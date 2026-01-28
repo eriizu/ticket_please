@@ -1,6 +1,7 @@
-use anyhow::Context as _;
 use tracing::{error, info, trace, warn};
+
 mod db;
+mod util;
 mod web_server;
 
 #[tokio::main]
@@ -19,9 +20,71 @@ async fn main() -> anyhow::Result<()> {
         if let Err(err) = repo_clone.mig().await {
             error!("migration: {err}");
         }
+        ensure_default_list_master(repo_clone).await;
     });
     web_server::start(repo).await?;
     Ok(())
+}
+
+const DEFAULT_LIST_MASTER_NAME: &'static str = "DEFAULT_LIST_MASTER";
+
+async fn ensure_default_list_master(repo: std::sync::Arc<db::Repository>) {
+    let root_list_masters = repo.get_root_list_master().await.unwrap();
+    let env_secret = std::env::var(DEFAULT_LIST_MASTER_NAME).ok();
+    let default_list_master = root_list_masters.iter().find(|x| x.lm_name == "default");
+
+    match (default_list_master, env_secret) {
+        (Some(master), Some(secret)) if master.lm_secret == secret => {
+            info!(
+                "default list master exists and {DEFAULT_LIST_MASTER_NAME} env variable and database match."
+            );
+        }
+        (Some(master), Some(secret)) => {
+            info!(
+                "default list master exists but {DEFAULT_LIST_MASTER_NAME} env variable differs, updating default master list with secret: {}",
+                master.lm_secret
+            );
+            repo.edit_list_master(
+                &master.lm_secret,
+                crate::db::PartialListMaster {
+                    lm_name: None,
+                    lm_parent: None,
+                    lm_secret: Some(secret.to_owned()),
+                },
+            )
+            .await
+            .unwrap();
+        }
+        (Some(master), None) => info!(
+            "default list master exists with secret: {} (no {DEFAULT_LIST_MASTER_NAME} provided) ",
+            master.lm_secret
+        ),
+        (None, Some(secret)) => {
+            warn!(
+                "default list master DOES NOT exist, creating with {DEFAULT_LIST_MASTER_NAME} secret: {}",
+                secret
+            );
+            repo.create_list_master(&secret, "default", None)
+                .await
+                .unwrap();
+        }
+        (None, None) if root_list_masters.is_empty() => {
+            use crate::util::generate_secret;
+            let generated_secret = generate_secret().unwrap();
+            warn!(
+                "default list master DOES NOT exist, creating with generated secret (add {DEFAULT_LIST_MASTER_NAME}={} to your env)",
+                &generated_secret
+            );
+            repo.create_list_master(&generated_secret, "default", None)
+                .await
+                .unwrap();
+        }
+        (None, None) => {
+            warn!(
+                "default list master DOES NOT exist, no {DEFAULT_LIST_MASTER_NAME} env variable provided, NOT ensuring list master presence in DB"
+            )
+        }
+    }
 }
 
 fn get_env_var(name: &str) -> anyhow::Result<String> {
