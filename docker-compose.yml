@@ -8,6 +8,8 @@ services:
       - "traefik.http.routers.ticket-fe.tls.certresolver=le"
       # - "traefik.http.services.ticket-fe.loadbalancer.server.port=3000"
       - "traefik.http.routers.ticket-fe.middlewares=not_found@file"
+    ports:
+      - 80:80
   be:
     build: ./be
     labels:
@@ -15,7 +17,7 @@ services:
       - "traefik.http.routers.ticket-api.rule=Host(`ticket.com`) && PathPrefix(`/api`)"
       - "traefik.http.routers.ticket-api.entrypoints=websecure"
       - "traefik.http.routers.ticket-api.tls.certresolver=le"
-      - "traefik.http.services.ticket-api.loadbalancer.server.port=3000"
+      # - "traefik.http.services.ticket-api.loadbalancer.server.port=3000"
       - "traefik.http.middlewares.strip-api.stripprefix.prefixes=/api"
       - "traefik.http.middlewares.api-ratelimit.ratelimit.average=50"
       - "traefik.http.middlewares.api-ratelimit.ratelimit.period=1s"
