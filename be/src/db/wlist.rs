@@ -40,27 +40,39 @@ pub struct PartialWaitingList {
     pub wlist_closes_at: Option<DateTime<FixedOffset>>,
 }
 
+const SELECT_LIST: &'static str = r#"SELECT
+    wlist_id,
+    wlist_secret,
+    wlist_invite_code,
+    wlist_name,
+    wlist_opens_at,
+    wlist_closes_at,
+    lm_id
+FROM waiting_list
+"#;
+
 impl Repository {
     #[instrument(skip(self), err, level = "trace")]
-    pub async fn get_all_waiting_list(&self, open: bool) -> Result<Vec<WaitingList>, RepoError> {
-        use futures_util::StreamExt;
+    pub async fn get_all_waiting_list(
+        &self,
+        include_closed: bool,
+    ) -> Result<Vec<WaitingList>, RepoError> {
         let now = Utc::now();
-        let mut waiting_list = sqlx::query_as::<_, WaitingList>(
-            "SELECT wlist_id, wlist_secret, wlist_invite_code, wlist_name, wlist_opens_at, wlist_closes_at, lm_id FROM waiting_list WHERE wlist_closes_at is null OR wlist_closes_at > $1",
-        )
-            .bind(now)
-            .fetch(&self.pool);
-        let mut out = vec![];
-        while let Some(row) = waiting_list.next().await {
-            let row = row.map_err(|e| RepoError::Sqlx {
-                error: e,
-                context: "get_waiting_list_by_id",
-            })?;
-            // if row.is_open(now) == open {
-            //     out.push(row);
-            // }
-            out.push(row);
+        let mut rq_str = SELECT_LIST.to_string();
+        let mut args = sqlx::postgres::PgArguments::default();
+        use sqlx::Arguments;
+        if !include_closed {
+            rq_str.push_str("WHERE wlist_closes_at is null OR wlist_closes_at > $1\n");
+            args.add(now)
+                .map_err(|e| RepoError::ArgumentEncode("WHERE wlist_closes_at", e))?;
         }
+        let out = sqlx::query_as_with(&rq_str, args)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|err| RepoError::Sqlx {
+                error: err,
+                context: "get_all_waiting_list",
+            })?;
         Ok(out)
     }
 

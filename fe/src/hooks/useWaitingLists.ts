@@ -7,21 +7,28 @@ type WaitingListData = typeof models.WaitingListRelated.infer;
 
 export const LIST_QUERY_KEY = ["list"] as const;
 
-export function useWaitingLists() {
+export function useWaitingLists(
+  master: string,
+  include_closed: boolean = false,
+) {
   const queryClient = useQueryClient();
+  const queryKey = [...LIST_QUERY_KEY, { include_closed }] as const;
 
   return useQuery({
-    queryKey: LIST_QUERY_KEY,
+    queryKey,
     staleTime: 5 * 1000,
     refetchInterval: 10 * 1000,
     retry: 3,
     select: (data) => Array.from(data),
     queryFn: async () => {
       const cached =
-        queryClient.getQueryData<WithETag<WaitingListData[]>>(LIST_QUERY_KEY);
+        queryClient.getQueryData<WithETag<WaitingListData[]>>(queryKey);
       const result = await fetchWithETag<WaitingListData[]>(
-        "/api/list?open=true",
+        "/api/list",
         cached,
+        {
+          params: { master, include_closed },
+        },
       );
 
       // Skip validation if data unchanged (304)
@@ -93,7 +100,9 @@ export function useWaitingListInvite(secret: string) {
     select: ({ _etag, ...data }) => data,
     queryFn: async () => {
       const cached =
-        queryClient.getQueryData<WithETag<typeof models.WaitingListInvite.infer>>(queryKey);
+        queryClient.getQueryData<
+          WithETag<typeof models.WaitingListInvite.infer>
+        >(queryKey);
       const result = await fetchWithETag<typeof models.WaitingListInvite.infer>(
         `/api/list/${secret}/invite`,
         cached,

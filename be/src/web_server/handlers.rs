@@ -133,11 +133,7 @@ pub async fn slot_delete(
 
 #[derive(serde::Deserialize)]
 struct GetManyListQuery {
-    open: bool,
-}
-
-#[derive(serde::Deserialize)]
-struct WaitingListCreateQuery {
+    include_closed: Option<bool>,
     master: String,
 }
 
@@ -146,7 +142,10 @@ pub async fn waiting_list_get_many(
     Query(query): Query<GetManyListQuery>,
     Data(repo): Data<&ArcRepo>,
 ) -> Result<Json<Vec<WaitingListWithRelatedDto>>, HandlerError> {
-    let waiting_list = repo.get_all_waiting_list(query.open).await?;
+    let _ = repo.get_list_master_by_secret(&query.master).await?;
+    let waiting_list = repo
+        .get_all_waiting_list(query.include_closed.unwrap_or(false))
+        .await?;
     let mut out = vec![];
     for item in waiting_list {
         let tokens = repo
@@ -168,6 +167,11 @@ pub async fn waiting_list_get_many(
         });
     }
     Ok(Json(out))
+}
+#[derive(serde::Deserialize)]
+
+struct WaitingListCreateQuery {
+    master: String,
 }
 
 #[poem::handler]

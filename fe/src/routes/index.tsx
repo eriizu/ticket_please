@@ -8,9 +8,7 @@ import {
   SingleWaitingList,
   SingleWaitingListContainer,
 } from "@/components/WaitingList";
-import type {
-  Registration,
-} from "@/contexts/RegistrationContext";
+import type { Registration } from "@/contexts/RegistrationContext";
 import { usePersistent } from "@/hooks/usePersistent";
 import { useWaitingLists } from "@/hooks/useWaitingLists";
 
@@ -21,6 +19,7 @@ export const Route = createFileRoute("/")({
 function App() {
   const isFetch = useIsFetching();
   const [isCreatingList, setIsCreatingList] = useState(false);
+  const [persistent, _] = usePersistent();
 
   return (
     <>
@@ -37,7 +36,9 @@ function App() {
           Create waiting list
         </button>
       </div>
-      <ManyWaitingList />
+      {persistent.list_master && (
+        <ManyWaitingList list_master={persistent.list_master} />
+      )}
       <NewListModal
         isOpen={isCreatingList}
         onClose={() => setIsCreatingList(false)}
@@ -46,12 +47,16 @@ function App() {
   );
 }
 
-function ManyWaitingList() {
-  const { data, isPending, error } = useWaitingLists();
+function ManyWaitingList(props: { list_master: string }) {
+  const [persistent, _] = usePersistent();
+  const [includeClosed, setIncludeClosed] = useState(false);
+  const { data, isPending, error } = useWaitingLists(
+    props.list_master,
+    includeClosed,
+  );
   const [registeringFor, setRegisteringFor] = useState<Registration | null>(
     null,
   );
-  const [persistent, _] = usePersistent();
 
   if (isPending)
     return (
@@ -80,20 +85,29 @@ function ManyWaitingList() {
   }
 
   return (
-      <div className="flex flex-col gap-4">
-        {data.map((list) => (
-          <SingleWaitingList
-            key={list.id}
-            list={list}
-            listManagmentSecret={persistent.known_lists[list.id] || null}
-          />
-        ))}
-        {registeringFor && (
-          <RegisterModal
-            onClose={() => setRegisteringFor(null)}
-            registeringFor={registeringFor}
-          />
-        )}
-      </div>
+    <div className="flex flex-col gap-4">
+      <label className="flex items-center gap-2 text-sm text-neutral-700">
+        <input
+          type="checkbox"
+          className="h-4 w-4"
+          checked={includeClosed}
+          onChange={(event) => setIncludeClosed(event.target.checked)}
+        />
+        Include closed lists
+      </label>
+      {data.map((list) => (
+        <SingleWaitingList
+          key={list.id}
+          list={list}
+          listManagmentSecret={persistent.known_lists[list.id] || null}
+        />
+      ))}
+      {registeringFor && (
+        <RegisterModal
+          onClose={() => setRegisteringFor(null)}
+          registeringFor={registeringFor}
+        />
+      )}
+    </div>
   );
 }

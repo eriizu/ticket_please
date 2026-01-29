@@ -14,18 +14,43 @@
 /** Data type with embedded ETag for cache validation */
 export type WithETag<T> = T & { _etag?: string };
 
+type QueryParams = Record<string, string | number | boolean | null | undefined>;
+
+export type FetchWithETagOptions = RequestInit & {
+  params?: QueryParams;
+};
+
+function buildUrl(url: string, params?: QueryParams): string {
+  if (!params || Object.keys(params).length === 0) {
+    return url;
+  }
+
+  const built = new URL(url, window.location.origin);
+  const search = new URLSearchParams(built.search);
+
+  for (const [key, value] of Object.entries(params)) {
+    if (value === null || value === undefined) {
+      continue;
+    }
+    search.set(key, String(value));
+  }
+
+  built.search = search.toString();
+  return built.toString();
+}
+
 /**
  * Fetch with ETag support for conditional requests.
  *
  * @param url - The URL to fetch
  * @param cachedData - Previously cached data with _etag field
- * @param options - Additional fetch options
+ * @param options - Additional fetch options (including query params)
  * @returns The response data with _etag embedded, or cached data on 304
  */
 export async function fetchWithETag<T>(
   url: string,
   cachedData: WithETag<T> | undefined,
-  options?: RequestInit,
+  options?: FetchWithETagOptions,
 ): Promise<WithETag<T>> {
   const headers = new Headers(options?.headers);
 
@@ -34,7 +59,9 @@ export async function fetchWithETag<T>(
     headers.set("If-None-Match", cachedData._etag);
   }
 
-  const response = await fetch(url, { ...options, headers });
+  const { params, ...fetchOptions } = options ?? {};
+  const requestUrl = buildUrl(url, params);
+  const response = await fetch(requestUrl, { ...fetchOptions, headers });
 
   // 304 Not Modified - return cached data as-is
   if (response.status === 304) {
