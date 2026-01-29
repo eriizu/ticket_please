@@ -4,11 +4,13 @@ import { useLocalStorage, getFromLocalStorage } from "@/hooks/localStorage";
 export function usePersistent() {
   return useLocalStorage(
     "persistent",
-    models.PersistentStorage.fromRaw({
-      known_tokens: [],
-      known_lists: {},
-      last_used_name: null,
-    }),
+    () =>
+      models.PersistentStorage.fromRaw({
+        known_tokens: [],
+        known_lists: {},
+        last_used_name: null,
+        list_master: null,
+      }),
     models.PersistentStorage.fromRaw,
   );
 }

@@ -33,17 +33,17 @@ export function getFromLocalStorage<T>(
  */
 export function useLocalStorage<T>(
   key: string,
-  initialValue: T,
+  initialValue: () => T,
   construct: ((raw: unknown) => T) | null,
 ) {
   // 1. Get the initial value
   // We use a functional initializer for useState so this only runs once on mount
   const [storedValue, setStoredValue] = useState<T>(() => {
     if (typeof window === "undefined") {
-      return initialValue;
+      return initialValue();
     }
 
-    return getFromLocalStorage(key, construct) || initialValue;
+    return getFromLocalStorage(key, construct) || initialValue();
   });
 
   // 2. Wrap the setter function
@@ -83,7 +83,7 @@ export function useLocalStorage<T>(
         try {
           const newValue = event.newValue
             ? JSON.parse(event.newValue)
-            : initialValue;
+            : initialValue();
           if (construct) {
             setStoredValue(construct(newValue));
           } else {
