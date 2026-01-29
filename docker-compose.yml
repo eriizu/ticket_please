@@ -1,0 +1,51 @@
+services:
+  fe:
+    build: ./fe
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ticket-fe.rule=Host(`ticket.com`)"
+      - "traefik.http.routers.ticket-fe.entrypoints=websecure"
+      - "traefik.http.routers.ticket-fe.tls.certresolver=le"
+      # - "traefik.http.services.ticket-fe.loadbalancer.server.port=3000"
+      - "traefik.http.routers.ticket-fe.middlewares=not_found@file"
+    ports:
+      - 80:80
+  be:
+    build: ./be
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ticket-api.rule=Host(`ticket.com`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.ticket-api.entrypoints=websecure"
+      - "traefik.http.routers.ticket-api.tls.certresolver=le"
+      # - "traefik.http.services.ticket-api.loadbalancer.server.port=3000"
+      - "traefik.http.middlewares.strip-api.stripprefix.prefixes=/api"
+      - "traefik.http.middlewares.api-ratelimit.ratelimit.average=50"
+      - "traefik.http.middlewares.api-ratelimit.ratelimit.period=1s"
+      - "traefik.http.middlewares.api-ratelimit.ratelimit.burst=100"
+      - "traefik.http.routers.ticket-api.middlewares=strip-api@docker,api-ratelimit@docker"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgres://ticket_user:your_password@db/ticket_db"
+      RUST_LOG: sqlx=warn,ticket_please_be=info,poem=warn
+      # DEFAULT_LIST_MASTER: O-D_ABa9hsdGwNSv9HTy1et5grzhDs2ymKF1uH2ngpc
+    # ports:
+    #   - 3000:3000
+  db:
+    image: postgres:18
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ticket_user -d ticket_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    environment:
+      POSTGRES_PASSWORD: your_password
+      POSTGRES_USER: ticket_user
+      POSTGRES_DB: ticket_db
+    volumes:
+      - pg_data:/var/lib/postgresql
+
+volumes:
+  pg_data:

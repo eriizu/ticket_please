@@ -101,11 +101,11 @@ fn get_env_var_parse<T: std::str::FromStr>(name: &str) -> anyhow::Result<T> {
 async fn setup_sqlx() -> anyhow::Result<sqlx::PgPool> {
     if let Ok(url) = std::env::var("DATABASE_URL") {
         info!("connecting to db using DATABASE_URL={}", url);
-        Ok(sqlx::postgres::PgPoolOptions::new().connect_lazy(&url)?)
+        Ok(sqlx::postgres::PgPoolOptions::new().connect(&url).await?)
     } else {
         let options = sqlx::postgres::PgConnectOptions::new()
             .host(get_env_var("PGHOST")?.as_str())
-            .port(get_env_var_parse("PGPORT")?)
+            .port(get_env_var_parse("PGPORT").unwrap_or(5432 as u16))
             .username(get_env_var("PGUSER")?.as_str())
             .database(get_env_var("PGDB")?.as_str())
             .password(get_env_var("PGPASS")?.as_str());

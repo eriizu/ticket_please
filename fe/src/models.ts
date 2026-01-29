@@ -84,7 +84,7 @@ export const PersistentStorageSchema = type({
   known_tokens: KnownToken.array(),
   "known_lists?": KnownLists,
   last_used_name: "string | null",
-  "list_master?": "string",
+  list_master: "string | null",
 });
 
 export class PersistentStorage {

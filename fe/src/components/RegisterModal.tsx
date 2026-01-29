@@ -91,6 +91,7 @@ export function RegisterModal(props: {
           value={clientName}
           onChange={(e) => setClientName(e.target.value)}
           disabled={isPending || unavailable}
+          required={true}
         />
         <div className="flex gap-1 mx-1">
           <button
