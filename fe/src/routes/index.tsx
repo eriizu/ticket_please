@@ -24,20 +24,23 @@ function App() {
   return (
     <>
       <TokenSumary />
-      <div className="my-2 text-neutral-800">
-        Requests status: {isFetch ? "fetching..." : "settled."}
-      </div>
-      <div className="my-2">
-        <button
-          type="button"
-          className="btn-secondary"
-          onClick={() => setIsCreatingList(true)}
-        >
-          Create waiting list
-        </button>
+      <div>
+        Soon you will be able to see your known waiting tokens here if you are
+        registered on an open list.
       </div>
       {persistent.list_master && (
-        <ManyWaitingList list_master={persistent.list_master} />
+        <>
+          <div className="my-2">
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => setIsCreatingList(true)}
+            >
+              Create waiting list
+            </button>
+          </div>
+          <ManyWaitingList list_master={persistent.list_master} />
+        </>
       )}
       <NewListModal
         isOpen={isCreatingList}
