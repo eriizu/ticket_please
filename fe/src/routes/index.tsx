@@ -1,6 +1,7 @@
 import { useIsFetching } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { KnownTokenCard } from "@/components/KnownTokenCard";
 import { NewListModal } from "@/components/NewListModal";
 import { RegisterModal } from "@/components/RegisterModal";
 import { TokenSumary } from "@/components/TokenSumary";
@@ -24,10 +25,18 @@ function App() {
   return (
     <>
       <TokenSumary />
-      <div>
-        Soon you will be able to see your known waiting tokens here if you are
-        registered on an open list.
-      </div>
+      {persistent.known_tokens.length > 0 && (
+        <div className="my-4">
+          <h2 className="text-lg font-semibold text-neutral-800 mb-2">
+            Your Registrations
+          </h2>
+          <div className="flex flex-col gap-2">
+            {persistent.known_tokens.map((token) => (
+              <KnownTokenCard key={token.id} secret={token.secret} />
+            ))}
+          </div>
+        </div>
+      )}
       {persistent.list_master && (
         <>
           <div className="my-2">

@@ -37,6 +37,12 @@ export const SlotRelated = SlotBase.merge({
   token: WaitingTokenBase.or("null"),
 });
 
+export const WaitingTokenWithSecret = WaitingTokenBase.merge({
+  secret: "string",
+  list: WaitingListBase,
+  "slot?": SlotBase.or("null"),
+});
+
 export const WaitingListRelated = WaitingListBase.merge({
   slots: SlotBase.array(),
   tokens: WaitingTokenBase.array(),
