@@ -18,7 +18,6 @@ export const Route = createFileRoute("/")({
 });
 
 function App() {
-  const isFetch = useIsFetching();
   const [isCreatingList, setIsCreatingList] = useState(false);
   const [persistent, _] = usePersistent();
 

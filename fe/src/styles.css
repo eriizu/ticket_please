@@ -16,7 +16,7 @@ code {
 
 @layer components {
   .btn-primary, .btn-secondary {
-    @apply border border-black rounded-md outline-pink-500 focus:outline-3 focus:border-white hover:outline-3 hover:border-white px-1;
+    @apply border border-neutral-500 rounded-md outline-pink-500 focus:outline-3 focus:border-white hover:outline-3 hover:border-white px-2 py-1;
   }
 
   .btn-primary {
@@ -24,6 +24,6 @@ code {
   }
 
   .btn-secondary {
-    @apply bg-neutral-100 disabled:text-neutral-700;
+    @apply bg-neutral-50 disabled:text-neutral-700;
   }
 }

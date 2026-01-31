@@ -2,7 +2,7 @@ import { memo, useState } from "react";
 import { useKnownToken } from "@/hooks/useKnownToken";
 import { useUnregisterToken } from "@/hooks/useUnregisterToken";
 import { UnregisterModal } from "./Slot/UnregisterModal";
-import { absoluteDateTimeFormatter } from "@/utils/formatters";
+import { formatRelativeDateTime } from "@/utils/formatters";
 
 interface KnownTokenCardProps {
   secret: string;
@@ -49,10 +49,7 @@ export const KnownTokenCard = memo(function KnownTokenCard({
           <div className="text-sm text-neutral-600">
             {data.est_turn_time ? (
               <span>
-                Expected turn:{" "}
-                <span className="font-mono">
-                  {absoluteDateTimeFormatter.format(data.est_turn_time)}
-                </span>
+                Expected turn: {formatRelativeDateTime(data.est_turn_time)}
               </span>
             ) : (
               <span className="text-neutral-400">No slot assigned yet</span>
