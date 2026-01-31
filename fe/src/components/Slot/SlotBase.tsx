@@ -10,7 +10,7 @@ interface SlotBaseProps {
  */
 export function SlotBase({ children }: SlotBaseProps) {
   return (
-    <div className="border h-12 rounded-md p-1 flex items-center gap-3">
+    <div className="border border-neutral-500 h-12 rounded-md p-1 flex items-center gap-3">
       {children}
     </div>
   );

@@ -19,51 +19,6 @@ type WaitingList = typeof models.WaitingListRelated.infer;
 type SlotData = typeof models.SlotBase.infer;
 type WaitingToken = typeof models.WaitingTokenBase.infer;
 
-interface SingleWaitingList1Props {
-  list: WaitingList;
-  listManagmentSecret: string | null;
-}
-
-// export const SingleWaitingList1 = memo(function SingleWaitingList(
-//   props: SingleWaitingList1Props,
-// ) {
-//   return (
-//     <SingleWaitingListContainer>
-//       <div>
-//         <div className="text-2xl">{props.list.name}</div>
-//         <div className="text-neutral-800 text-sm">
-//           <OpenedTimeInterval
-//             start={props.list.opens_at}
-//             end={props.list.closes_at}
-//             startVerb="opens"
-//             endVerb="closes"
-//           />
-//         </div>
-//       </div>
-//       <QueueSection listId={props.list.id} queueState={queueState} />
-//
-//       {props.listManagmentSecret && (
-//         <AdminActions
-//           onGenerateSlots={() => setIsModalSlotOpen(true)}
-//           onDeleteList={() => deleteList(adminSecret)}
-//         />
-//       )}
-//
-//       <SlotsByDaySection slotsByDay={slotsByDay} listId={list.id} />
-//
-//       {hasAdminAccess && (
-//         <GenSlotModal
-//           isOpen={isModalSlotOpen}
-//           onClose={() => setIsModalSlotOpen(false)}
-//           listId={list.id}
-//           listName={list.name}
-//           listSecret={adminSecret}
-//         />
-//       )}
-//     </SingleWaitingListContainer>
-//   );
-// });
-
 interface SingleWaitingListProps {
   list: WaitingList;
   listManagmentSecret: string | null;
@@ -103,15 +58,16 @@ export const SingleWaitingList = memo(
             />
           </div>
         </div>
+
+        {listManagmentSecret && (
+          <AdminActions list={list} managmentSecret={listManagmentSecret} />
+        )}
+
         <QueueSection
           listId={list.id}
           queuedTokens={queueState.queuedTokens}
           mySecret={queueState.mySecret} invite={invite}
         />
-
-        {listManagmentSecret && (
-          <AdminActions list={list} managmentSecret={listManagmentSecret} />
-        )}
 
         <SlotsByDaySection slots={list.slots} listId={list.id}  invite={invite}/>
       </SingleWaitingListContainer>
@@ -132,7 +88,7 @@ export const SingleWaitingListContainer = memo(
     children,
   }: SingleWaitingListContainerProps) {
     return (
-      <div className="flex flex-col gap-3 p-2 border rounded-xl border-neutral-500">
+      <div className="flex flex-col gap-3 p-2 border rounded-xl border-neutral-300">
         {children}
       </div>
     );
