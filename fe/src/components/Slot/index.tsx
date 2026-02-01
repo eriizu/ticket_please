@@ -24,7 +24,11 @@ export function getSlotVariant(
   slot: SlotData,
   registeredSlotIds: number[],
 ): SlotVariant {
-  if (registeredSlotIds.includes(slot.id)) {
+  if (
+    (slot.registered_real_turn_time === undefined ||
+      slot.registered_real_turn_time > new Date()) &&
+    registeredSlotIds.includes(slot.id)
+  ) {
     return "mine";
   }
   if (slot.registered_client_name) {
@@ -48,27 +52,35 @@ interface SlotProps {
  * Main Slot component that routes to the appropriate variant.
  * Use this component when you need dynamic variant selection.
  */
-export const Slot = memo(({ slot, invite, variant, secret, listSecret }: SlotProps) => {
-  const slotContent = (() => {
-    switch (variant) {
-      case "mine":
-        return <SlotMine slot={slot} secret={secret} />;
-      case "taken":
-        return <SlotTaken slot={slot} />;
-      case "open":
-      case "open-muted":
-        return <SlotOpen slot={slot} variant={variant as SlotOpenVariant} invite={invite} />;
+export const Slot = memo(
+  ({ slot, invite, variant, secret, listSecret }: SlotProps) => {
+    const slotContent = (() => {
+      switch (variant) {
+        case "mine":
+          return <SlotMine slot={slot} secret={secret} />;
+        case "taken":
+          return <SlotTaken slot={slot} />;
+        case "open":
+        case "open-muted":
+          return (
+            <SlotOpen
+              slot={slot}
+              variant={variant as SlotOpenVariant}
+              invite={invite}
+            />
+          );
+      }
+    })();
+
+    if (listSecret) {
+      return (
+        <div>
+          {slotContent}
+          <SlotManagementDrawer slot={slot} listSecret={listSecret} />
+        </div>
+      );
     }
-  })();
 
-  if (listSecret) {
-    return (
-      <div>
-        {slotContent}
-        <SlotManagementDrawer slot={slot} listSecret={listSecret} />
-      </div>
-    );
-  }
-
-  return slotContent;
-});
+    return slotContent;
+  },
+);
