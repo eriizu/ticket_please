@@ -28,7 +28,8 @@ export const KnownTokenCard = memo(function KnownTokenCard({
     return (
       <div className="p-3 border rounded-lg border-red-300 bg-red-50">
         <div className="text-red-700 text-sm">
-          Token may have been deleted or expired
+          Token may have been deleted or expired. You can it using the button at
+          the top of the page.
         </div>
       </div>
     );
