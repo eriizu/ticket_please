@@ -8,6 +8,7 @@ export const SlotBase = type({
   list_id: "number",
   "registered_client_name?": "string",
   "registered_token_id?": "number",
+  "registered_real_turn_time?": "Date",
 });
 
 export const WaitingTokenBase = type({
@@ -64,6 +65,7 @@ export function matchSlotsToTokens(
     if (token) {
       slot.registered_client_name = token.client_name || undefined;
       slot.registered_token_id = token.id;
+      slot.registered_real_turn_time = token.real_turn_time || undefined;
     }
   });
 }

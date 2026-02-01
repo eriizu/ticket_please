@@ -3,6 +3,7 @@ use crate::db::WaitingTokenCriteria;
 use super::{ArcRepo, HandlerError, dto::*};
 use chrono::{Duration, prelude::*};
 use poem::web::{Data, Json, Path, Query};
+use tracing::debug;
 
 #[poem::handler]
 pub async fn index() -> String {
@@ -315,18 +316,37 @@ pub async fn waiting_token_edit_as_client(
     Ok(Json((updated_waiting_token, waiting_list, slot).into()))
 }
 
-#[derive(serde::Deserialize)]
-struct EditWaitingParams {
+#[derive(serde::Deserialize, Debug)]
+struct AdminTokenParams {
     list_secret: String,
     token_id: i32,
 }
 
 #[poem::handler]
+pub async fn waiting_token_delete_as_admin(
+    Path(params): Path<AdminTokenParams>,
+    Data(repo): Data<&ArcRepo>,
+) -> Result<poem::http::StatusCode, HandlerError> {
+    let waiting_list = repo.get_waiting_list_by_secret(&params.list_secret).await?;
+    let criteria = crate::db::WaitingTokenCriteria::Id(params.token_id);
+    let waiting_token = repo.get_waiting_token(criteria).await?;
+    if waiting_list.wlist_id != waiting_token.wlist_id {
+        Err(HandlerError::NotFound {
+            context: "checking token is part of waiting list",
+        })?
+    }
+    repo.delete_waiting_token(waiting_token.wtoken_secret)
+        .await?;
+    Ok(poem::http::StatusCode::NO_CONTENT)
+}
+
+#[poem::handler]
 pub async fn waiting_token_edit_as_admin(
-    Path(params): Path<EditWaitingParams>,
+    Path(params): Path<AdminTokenParams>,
     Data(repo): Data<&ArcRepo>,
     Json(body): Json<EditWaitingTokenDto>,
 ) -> Result<Json<WaitingTokenWithRelatedDto>, HandlerError> {
+    debug!("{params:?} {body:?}");
     let criteria = crate::db::WaitingTokenCriteria::Id(params.token_id);
     let mut updates: crate::db::EditWaitingToken = body.into();
     let waiting_list = repo.get_waiting_list_by_secret(&params.list_secret).await?;

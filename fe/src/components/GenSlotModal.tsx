@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useId, useState } from "react";
+import { type FormEvent, useEffect, useId, useRef, useState } from "react";
 import { Modal } from "../components/Modal";
 import { useGenerateSlots } from "@/hooks/useGenerateSlots";
 
@@ -33,11 +33,22 @@ export function GenSlotModal({
   const [break_duration_minutes, setBreakDurationMinutes] = useState("15");
   const [break_every_n_slots, setBreakEveryNSlots] = useState("3");
   const [slot_number, setSlotNumber] = useState("5");
-  const [closeModal, setCloseModal] = useState(false);
-  const { reset, status, mutate: generateSlots, isSuccess } = useGenerateSlots();
+  const {
+    reset,
+    status,
+    mutate: generateSlots,
+    isSuccess,
+  } = useGenerateSlots();
 
+  const startInputRef = useRef<HTMLInputElement>(null);
   const startInputId = useId();
   const slotDurationInputId = useId();
+
+  useEffect(() => {
+    if (isOpen && startInputRef.current) {
+      startInputRef.current.focus();
+    }
+  }, [isOpen]);
   const breakDurationInputId = useId();
   const breakEveryInputId = useId();
   const slotNumberInputId = useId();
@@ -78,13 +89,17 @@ export function GenSlotModal({
     setBreakDurationMinutes("15");
     setBreakEveryNSlots("3");
     setSlotNumber("5");
-    setCloseModal(false);
     reset();
     onClose();
   }, [isSuccess, reset, onClose]);
 
   return (
-    <Modal isOpen={isOpen} onClose={() => setCloseModal(true)}>
+    <Modal
+      isOpen={isOpen}
+      onClose={() => {
+        onClose();
+      }}
+    >
       <h2 className="mx-2 mb-2 text-xl font-semibold">Generate slots</h2>
       <div className="mx-2 mb-2 text-neutral-700">
         List name:{" "}
@@ -98,6 +113,7 @@ export function GenSlotModal({
           </label>
           <div className="mx-1 flex gap-2">
             <input
+              ref={startInputRef}
               id={startInputId}
               name="start"
               type="datetime-local"
@@ -188,7 +204,9 @@ export function GenSlotModal({
           </button>
           <button
             type="button"
-            onClick={() => setCloseModal(true)}
+            onClick={() => {
+              onClose();
+            }}
             className="btn-secondary mt-3 flex-1 py-1"
           >
             Cancel

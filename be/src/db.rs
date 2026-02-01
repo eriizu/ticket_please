@@ -50,6 +50,7 @@ impl Repository {
 
 enum EditClause {
     Assignment { name: String, bind_idx: usize },
+    AssignmentNull { name: String },
     Where { name: String, bind_idx: usize },
     WhereNull { name: String },
 }
@@ -70,9 +71,12 @@ impl EditRequestAndArgsBuilder {
     }
 
     pub fn has_assignments(&self) -> bool {
-        self.clauses
-            .iter()
-            .any(|clause| matches!(clause, EditClause::Assignment { .. }))
+        self.clauses.iter().any(|clause| {
+            matches!(
+                clause,
+                EditClause::Assignment { .. } | EditClause::AssignmentNull { .. }
+            )
+        })
     }
 
     pub fn add_assignment<T>(&mut self, name: &'static str, val: T) -> Result<(), RepoError>
@@ -100,6 +104,12 @@ impl EditRequestAndArgsBuilder {
         } else {
             Ok(())
         }
+    }
+
+    pub fn add_null_assignment(&mut self, name: &'static str) {
+        self.clauses.push(EditClause::AssignmentNull {
+            name: name.to_owned(),
+        });
     }
 
     pub fn add_where<T>(&mut self, name: &'static str, val: T) -> Result<(), RepoError>
@@ -131,6 +141,9 @@ impl EditRequestAndArgsBuilder {
             match clause {
                 EditClause::Assignment { name, bind_idx } => {
                     assignments.push(format!("{name} = ${bind_idx}"));
+                }
+                EditClause::AssignmentNull { name } => {
+                    assignments.push(format!("{name} = NULL"));
                 }
                 EditClause::Where { name, bind_idx } => {
                     wheres.push(format!("{name} = ${bind_idx}"));

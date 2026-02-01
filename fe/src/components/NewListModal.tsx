@@ -1,4 +1,4 @@
-import { type FormEvent, useId, useState, useEffect } from "react";
+import { type FormEvent, useId, useState, useEffect, useRef } from "react";
 import { Modal } from "../components/Modal";
 import { useCreateList } from "@/hooks/useCreateList";
 import { usePersistent } from "@/hooks/usePersistent";
@@ -27,7 +27,14 @@ export function NewListModal({ isOpen, onClose }: NewListModalProps) {
   const [opensAt, setOpensAt] = useState("");
   const [closesAt, setClosesAt] = useState("");
   const [closeModal, setCloseModal] = useState(false);
+  const nameInputRef = useRef<HTMLInputElement>(null);
   const nameInputId = useId();
+
+  useEffect(() => {
+    if (isOpen && nameInputRef.current) {
+      nameInputRef.current.focus();
+    }
+  }, [isOpen]);
   const opensAtInputId = useId();
   const closesAtInputId = useId();
   const [persistent, setPersistent] = usePersistent();
@@ -98,6 +105,7 @@ export function NewListModal({ isOpen, onClose }: NewListModalProps) {
             Name
           </label>
           <input
+            ref={nameInputRef}
             id={nameInputId}
             name="list_name"
             type="text"

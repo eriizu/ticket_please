@@ -111,7 +111,7 @@ pub async fn start(repo: Arc<crate::db::Repository>) -> anyhow::Result<()> {
         )
         .at(
             "/list/:list_secret/token/:token_id",
-            patch(waiting_token_edit_as_admin),
+            patch(waiting_token_edit_as_admin).delete(waiting_token_delete_as_admin),
         )
         .at(
             "/list/:list_secret/slots/gen",

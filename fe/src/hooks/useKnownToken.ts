@@ -7,7 +7,7 @@ type TokenData = typeof models.WaitingTokenWithSecret.infer;
 export function useKnownToken(secret: string) {
   return useQuery({
     queryKey: ["token", secret] as const,
-    refetchInterval: 5000,
+    refetchInterval: 10000,
     retry: 1,
     queryFn: async () => {
       const res = await fetch(`/api/token/${secret}`);

@@ -15,8 +15,8 @@ code {
 }
 
 @layer components {
-  .btn-primary, .btn-secondary {
-    @apply border border-neutral-400 rounded-md outline-pink-500 focus:outline-3 focus:border-white hover:outline-3 hover:border-white px-2 py-1;
+  .btn-primary, .btn-dangerous, .btn-secondary, .btn-neutral {
+    @apply border border-neutral-400 rounded-md outline-pink-500 focus:outline-2 focus:border-white hover:outline-2 hover:border-white px-2 py-1;
   }
 
   .btn-primary {
@@ -25,5 +25,13 @@ code {
 
   .btn-secondary {
     @apply bg-neutral-50 disabled:text-neutral-700;
+  }
+
+  .btn-dangerous {
+    @apply bg-red-700 text-neutral-50 font-bold border-white disabled:bg-red-200;
+  }
+
+  .btn-neutral {
+    @apply disabled:text-neutral-700;
   }
 }

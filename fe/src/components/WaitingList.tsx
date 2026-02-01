@@ -1,5 +1,6 @@
 import { memo, useMemo, useState } from "react";
 import { GenSlotModal } from "@/components/GenSlotModal";
+import { RegistrationsTable } from "@/components/RegistrationsTable";
 import { getSlotVariant, Slot } from "@/components/Slot";
 import type { Registration } from "@/contexts/RegistrationContext";
 import { useDeleteList } from "@/hooks/useDeleteList";
@@ -66,10 +67,16 @@ export const SingleWaitingList = memo(
         <QueueSection
           listId={list.id}
           queuedTokens={queueState.queuedTokens}
-          mySecret={queueState.mySecret} invite={invite}
+          mySecret={queueState.mySecret}
+          invite={invite}
         />
 
-        <SlotsByDaySection slots={list.slots} listId={list.id}  invite={invite}/>
+        <SlotsByDaySection
+          slots={list.slots}
+          listId={list.id}
+          invite={invite}
+          listSecret={listManagmentSecret || undefined}
+        />
       </SingleWaitingListContainer>
     );
   },
@@ -171,6 +178,7 @@ interface AdminActionsProps {
 
 const AdminActions = memo(({ list, managmentSecret }: AdminActionsProps) => {
   const [isModalSlotOpen, setIsModalSlotOpen] = useState(false);
+  const [showRegistrations, setShowRegistrations] = useState(false);
   const { mutate: deleteList } = useDeleteList();
   return (
     <>
@@ -190,7 +198,18 @@ const AdminActions = memo(({ list, managmentSecret }: AdminActionsProps) => {
           Delete list
         </button>
         <Invite managmentSecret={managmentSecret} />
+        <button
+          type="button"
+          className="btn-secondary w-fit"
+          onClick={() => setShowRegistrations(!showRegistrations)}
+        >
+          {showRegistrations ? "Hide" : "Show"} registrations (
+          {list.tokens.length})
+        </button>
       </div>
+      {showRegistrations && (
+        <RegistrationsTable tokens={list.tokens} listSecret={managmentSecret} />
+      )}
       <GenSlotModal
         isOpen={isModalSlotOpen}
         onClose={() => setIsModalSlotOpen(false)}
@@ -203,11 +222,11 @@ const AdminActions = memo(({ list, managmentSecret }: AdminActionsProps) => {
 });
 
 const Invite = ({ managmentSecret }: { managmentSecret: string }) => {
-  const { data: invite, isFetching: inviteIsFecting } =
+  const { data: invite, isLoading: inviteIsLoading } =
     useWaitingListInvite(managmentSecret);
   const [copied, setCopied] = useState(false);
-  if (inviteIsFecting) {
-    return <>Fetching invite</>;
+  if (inviteIsLoading) {
+    return <>Loading invite</>;
   }
   if (invite) {
     const inviteCode = invite.invite_code;
@@ -223,7 +242,7 @@ const Invite = ({ managmentSecret }: { managmentSecret: string }) => {
     return (
       <button
         type="button"
-        className="btn-secondary w-45"
+        className="btn-secondary w-50"
         onClick={() => {
           void navigator.clipboard.writeText(inviteLink);
           setCopied(true);
@@ -246,25 +265,35 @@ interface SlotsByDaySectionProps {
   slots: SlotData[];
   listId: number;
   invite?: string;
+  listSecret?: string;
 }
 
-const SlotsByDaySection = memo(({ listId, invite, slots }: SlotsByDaySectionProps) => {
-  const slotsByDay = useMemo(() => {
-    const groupedSlots = groupSlotsByLocalStartDateSorted(slots);
-    return Object.entries(groupedSlots).sort(([a], [b]) => a.localeCompare(b));
-  }, [slots]);
+const SlotsByDaySection = memo(
+  ({ listSecret, listId, invite, slots }: SlotsByDaySectionProps) => {
+    const slotsByDay = useMemo(() => {
+      const groupedSlots = groupSlotsByLocalStartDateSorted(slots);
+      return Object.entries(groupedSlots).sort(([a], [b]) =>
+        a.localeCompare(b),
+      );
+    }, [slots]);
 
-  return (
-    <>
-      {slotsByDay.map(([day, slots]) => (
-        <div key={day}>
-          <h3 className="font-semibold">{day}</h3>
-          <SlotsGrid slots={slots} listId={listId}  invite={invite}/>
-        </div>
-      ))}
-    </>
-  );
-});
+    return (
+      <>
+        {slotsByDay.map(([day, slots]) => (
+          <div key={day}>
+            <h3 className="font-semibold">{day}</h3>
+            <SlotsGrid
+              slots={slots}
+              listId={listId}
+              invite={invite}
+              listSecret={listSecret}
+            />
+          </div>
+        ))}
+      </>
+    );
+  },
+);
 
 // -----------------------------------------------------------------------------
 // SlotsGrid - Grid of slot components
@@ -274,35 +303,39 @@ interface SlotsGridProps {
   slots: SlotData[];
   listId: number;
   invite?: string;
+  listSecret?: string;
 }
 
-const SlotsGrid = memo(({ slots, listId, invite }: SlotsGridProps) => {
-  const [persistent] = usePersistent();
+const SlotsGrid = memo(
+  ({ slots, listSecret, listId, invite }: SlotsGridProps) => {
+    const [persistent] = usePersistent();
 
-  const tokens = persistent.forList(listId);
-  const registeredSlotIds = tokens
-    .map((t) => t.slot_id)
-    .filter((id): id is number => id !== null);
+    const tokens = persistent.forList(listId);
+    const registeredSlotIds = tokens
+      .map((t) => t.slot_id)
+      .filter((id): id is number => id !== null);
 
-  return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 xl:grid-cols-5 gap-1">
-      {slots.map((slot) => {
-        const variant = getSlotVariant(slot, registeredSlotIds);
-        const token = tokens.find((t) => t.slot_id === slot.id);
+    return (
+      <div className="grid grid-cols-1 lg:grid-cols-4 xl:grid-cols-5 gap-1">
+        {slots.map((slot) => {
+          const variant = getSlotVariant(slot, registeredSlotIds);
+          const token = tokens.find((t) => t.slot_id === slot.id);
 
-        return (
-          <Slot
-            key={slot.id}
-            slot={slot}
-            variant={variant}
-            secret={token?.secret}
- invite={invite}
-          />
-        );
-      })}
-    </div>
-  );
-});
+          return (
+            <Slot
+              key={slot.id}
+              slot={slot}
+              variant={variant}
+              secret={token?.secret}
+              invite={invite}
+              listSecret={listSecret}
+            />
+          );
+        })}
+      </div>
+    );
+  },
+);
 
 // -----------------------------------------------------------------------------
 // OpenedTimeInterval - Displays open/close time range

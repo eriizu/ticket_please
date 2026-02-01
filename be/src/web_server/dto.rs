@@ -217,15 +217,18 @@ impl std::convert::Into<crate::db::EditWaitingToken> for AskWaitingTokenDto {
             wtoken_est_turn_time: None,
             wtoken_real_turn_time: None,
             slot_id: self.slot_id,
+            clear_fields: vec![],
         }
     }
 }
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, Debug)]
 pub struct EditWaitingTokenDto {
     pub est_turn_time: Option<DateTime<FixedOffset>>,
     pub real_turn_time: Option<DateTime<FixedOffset>>,
     pub slot_id: Option<i32>,
+    #[serde(default)]
+    pub clear_fields: Vec<crate::db::WaitingTokenField>,
 }
 
 impl std::convert::Into<crate::db::EditWaitingToken> for EditWaitingTokenDto {
@@ -235,6 +238,7 @@ impl std::convert::Into<crate::db::EditWaitingToken> for EditWaitingTokenDto {
             wtoken_est_turn_time: self.est_turn_time,
             wtoken_real_turn_time: self.real_turn_time,
             slot_id: self.slot_id,
+            clear_fields: self.clear_fields,
         }
     }
 }

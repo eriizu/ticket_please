@@ -14,12 +14,23 @@ pub struct WaitingToken {
     pub wlist_id: i32,
 }
 
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum WaitingTokenField {
+    ClientName,
+    EstTurnTime,
+    RealTurnTime,
+    SlotId,
+}
+
 #[derive(serde::Serialize, serde::Deserialize, Debug, sqlx::FromRow)]
 pub struct EditWaitingToken {
     pub wtoken_client_name: Option<String>,
     pub wtoken_est_turn_time: Option<DateTime<FixedOffset>>,
     pub wtoken_real_turn_time: Option<DateTime<FixedOffset>>,
     pub slot_id: Option<i32>,
+    #[serde(default)]
+    pub clear_fields: Vec<WaitingTokenField>,
 }
 
 #[derive(Clone, Debug)]
@@ -131,6 +142,14 @@ RETURNING
         generator.add_if_some("wtoken_est_turn_time", updates.wtoken_est_turn_time)?;
         generator.add_if_some("wtoken_real_turn_time", updates.wtoken_real_turn_time)?;
         generator.add_if_some("slot_id", updates.slot_id)?;
+        for field in updates.clear_fields {
+            match field {
+                WaitingTokenField::ClientName => generator.add_null_assignment("wtoken_client_name"),
+                WaitingTokenField::EstTurnTime => generator.add_null_assignment("wtoken_est_turn_time"),
+                WaitingTokenField::RealTurnTime => generator.add_null_assignment("wtoken_real_turn_time"),
+                WaitingTokenField::SlotId => generator.add_null_assignment("slot_id"),
+            }
+        }
         match criteria {
             WaitingTokenCriteria::Id(id) => generator.add_where("wtoken_id", id)?,
             WaitingTokenCriteria::Secret(secret) => generator.add_where("wtoken_secret", secret)?,

@@ -19,7 +19,7 @@ export const Route = createRootRoute({
           <Header />
           <Outlet />
         </div>
-        {/*<TanStackDevtools
+        <TanStackDevtools
           config={{
             position: "bottom-right",
           }}
@@ -33,7 +33,7 @@ export const Route = createRootRoute({
               render: <ReactQueryDevtoolsPanel />,
             },
           ]}
-        />*/}
+        />
       </QueryClientProvider>
     </>
   ),
