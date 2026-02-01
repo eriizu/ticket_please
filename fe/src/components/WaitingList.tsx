@@ -318,7 +318,10 @@ const SlotsGrid = memo(
     return (
       <div className="grid grid-cols-1 lg:grid-cols-4 xl:grid-cols-5 gap-1">
         {slots.map((slot) => {
-          const variant = getSlotVariant(slot, registeredSlotIds);
+          let variant = getSlotVariant(slot, registeredSlotIds);
+          if (variant === "open" && listSecret) {
+            variant = "open-muted";
+          }
           const token = tokens.find((t) => t.slot_id === slot.id);
 
           return (
