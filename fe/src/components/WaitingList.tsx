@@ -239,16 +239,30 @@ const Invite = ({ managmentSecret }: { managmentSecret: string }) => {
       inviteCode.length > 10
         ? `${inviteCode.slice(0, 6)}...${inviteCode.slice(-4)}`
         : inviteCode;
+
+    const copyToClipboard = () => {
+      if (navigator.clipboard?.writeText) {
+        void navigator.clipboard.writeText(inviteLink);
+      } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = inviteLink;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+      }
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1000);
+    };
+
     return (
       <button
         type="button"
         className="btn-secondary w-50"
-        onClick={() => {
-          void navigator.clipboard.writeText(inviteLink);
-          setCopied(true);
-          window.setTimeout(() => setCopied(false), 1000);
-        }}
-        title="Copy full invite link"
+        onClick={copyToClipboard}
+        title="Copy invite link"
       >
         invite: {copied ? "copied" : displayCode}
       </button>
