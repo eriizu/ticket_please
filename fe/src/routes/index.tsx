@@ -69,31 +69,42 @@ function ManyWaitingList(props: { list_master: string }) {
     null,
   );
 
-  if (isPending)
-    return (
-      <SingleWaitingListContainer>
-        <div className="flex-1 flex items-center justify-center text-neutral-700 p-10">
-          <div>Loading lists...</div>
-        </div>
-      </SingleWaitingListContainer>
-    );
-  if (error)
-    return (
-      <SingleWaitingListContainer>
-        <div className="flex-1 flex items-center justify-center text-red-700 p-10">
-          <div>Loading failure</div>
-        </div>
-      </SingleWaitingListContainer>
-    );
-  if (data.length === 0) {
-    return (
-      <SingleWaitingListContainer>
-        <div className="flex-1 flex items-center justify-center text-neutral-700 p-10">
-          <div>No lists are currently open.</div>
-        </div>
-      </SingleWaitingListContainer>
-    );
-  }
+  const renderContent = () => {
+    if (isPending) {
+      return (
+        <SingleWaitingListContainer>
+          <div className="flex-1 flex items-center justify-center text-neutral-700 p-10">
+            <div>Loading lists...</div>
+          </div>
+        </SingleWaitingListContainer>
+      );
+    }
+    if (error) {
+      return (
+        <SingleWaitingListContainer>
+          <div className="flex-1 flex items-center justify-center text-red-700 p-10">
+            <div>Loading failure</div>
+          </div>
+        </SingleWaitingListContainer>
+      );
+    }
+    if (data.length === 0) {
+      return (
+        <SingleWaitingListContainer>
+          <div className="flex-1 flex items-center justify-center text-neutral-700 p-10">
+            <div>No lists are currently open.</div>
+          </div>
+        </SingleWaitingListContainer>
+      );
+    }
+    return data.map((list) => (
+      <SingleWaitingList
+        key={list.id}
+        list={list}
+        listManagmentSecret={persistent.known_lists[list.id] || null}
+      />
+    ));
+  };
 
   return (
     <div className="flex flex-col gap-4">
@@ -106,13 +117,7 @@ function ManyWaitingList(props: { list_master: string }) {
         />
         Include closed lists
       </label>
-      {data.map((list) => (
-        <SingleWaitingList
-          key={list.id}
-          list={list}
-          listManagmentSecret={persistent.known_lists[list.id] || null}
-        />
-      ))}
+      {renderContent()}
       {registeringFor && (
         <RegisterModal
           onClose={() => setRegisteringFor(null)}
