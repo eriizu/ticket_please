@@ -180,7 +180,7 @@ export const SlotManagementDrawer = memo(function SlotManagementDrawer({
   };
 
   return (
-    <div className="flex gap-1 mt-1 mb-5 h-8">
+    <div className="flex gap-1 mt-1 h-8">
       {isTaken ? (
         <>
           {hasRealTurnTime ? (

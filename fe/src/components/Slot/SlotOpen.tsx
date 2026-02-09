@@ -35,7 +35,7 @@ function getStatusDisplay(
  * - "open" variant: fully available, shows register button
  * - "open-muted" variant: available but user already has a slot, muted styling
  */
-export const SlotOpen = memo(({ slot,invite, variant }: SlotOpenProps) => {
+export const SlotOpen = memo(({ slot, invite, variant }: SlotOpenProps) => {
   const isPast = slot.starts_at <= new Date();
   const status = getStatusDisplay(variant, isPast);
   const canRegister = variant === "open" && !isPast;
@@ -44,7 +44,7 @@ export const SlotOpen = memo(({ slot,invite, variant }: SlotOpenProps) => {
     null,
   );
   return (
-    <SlotBase>
+    <>
       <div className="w-20 flex-none">
         <div className="tabular-nums text-xl">
           {absoluteTimeFormatter.format(slot.starts_at)}
@@ -59,7 +59,11 @@ export const SlotOpen = memo(({ slot,invite, variant }: SlotOpenProps) => {
             type="button"
             className='btn-secondary before:content-["+"] before:mr-1'
             onClick={() =>
-              setRegisteringFor({ slot_id: slot.id, list_id: slot.list_id , invite})
+              setRegisteringFor({
+                slot_id: slot.id,
+                list_id: slot.list_id,
+                invite,
+              })
             }
           >
             register
@@ -72,6 +76,6 @@ export const SlotOpen = memo(({ slot,invite, variant }: SlotOpenProps) => {
           registeringFor={registeringFor}
         />
       )}
-    </SlotBase>
+    </>
   );
 });

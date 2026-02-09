@@ -38,35 +38,31 @@ export const SlotTaken = memo(function SlotTaken({ slot }: SlotTakenProps) {
     : null;
 
   return (
-    <div className="text-neutral-700">
-      <SlotBase>
-        <div className="flex-none">
-          <div className="tabular-nums text-xl">
-            {absoluteTimeFormatter.format(slot.starts_at)}
-          </div>
-          {isComplete ? (
-            <div className="text-neutral-500 text-xs font-mono w-fit">
-              COMPLETE
-            </div>
-          ) : (
-            <div className="text-red-800 text-xs font-mono w-fit">
-              NOT AVAIL.
-            </div>
-          )}
+    <>
+      <div className="flex-none">
+        <div className="tabular-nums text-xl">
+          {absoluteTimeFormatter.format(slot.starts_at)}
         </div>
-        <div className="align-bottom">
-          <div className="whitespace-nowrap overflow-hidden text-ellipsis text-xs">
-            {slot.registered_client_name}
+        {isComplete ? (
+          <div className="text-neutral-500 text-xs font-mono w-fit">
+            COMPLETE
           </div>
-          {isComplete ? (
-            <div className={`text-xs ${delta?.className ?? "text-green-800"}`}>
-              {delta?.text ?? "on time"}
-            </div>
-          ) : (
-            <div className="text-xs">is currently registered</div>
-          )}
+        ) : (
+          <div className="text-red-800 text-xs font-mono w-fit">NOT AVAIL.</div>
+        )}
+      </div>
+      <div className="align-bottom">
+        <div className="whitespace-nowrap overflow-hidden text-ellipsis text-xs">
+          {slot.registered_client_name}
         </div>
-      </SlotBase>
-    </div>
+        {isComplete ? (
+          <div className={`text-xs ${delta?.className ?? "text-green-800"}`}>
+            {delta?.text ?? "on time"}
+          </div>
+        ) : (
+          <div className="text-xs">is currently registered</div>
+        )}
+      </div>
+    </>
   );
 });

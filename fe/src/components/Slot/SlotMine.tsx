@@ -36,7 +36,7 @@ export const SlotMine = memo(({ slot, secret }: SlotMineProps) => {
       disabled={aboutToUnregister || isUnregistering}
       className="group w-full text-left cursor-pointer disabled:cursor-wait"
     >
-      <SlotBase>
+      <>
         <div className="flex-none group-hover:hidden">
           <div className="tabular-nums text-xl">
             {absoluteTimeFormatter.format(slot.starts_at)}
@@ -65,7 +65,7 @@ export const SlotMine = memo(({ slot, secret }: SlotMineProps) => {
             isUnregistering={isUnregistering}
           />
         )}
-      </SlotBase>
+      </>
     </button>
   );
 });

@@ -9,9 +9,5 @@ interface SlotBaseProps {
  * Provides consistent styling for all slot variants.
  */
 export function SlotBase({ children }: SlotBaseProps) {
-  return (
-    <div className="border border-neutral-500 h-12 rounded-md p-1 flex items-center gap-3">
-      {children}
-    </div>
-  );
+  return <div className="border border-neutral-500 rounded-md">{children}</div>;
 }

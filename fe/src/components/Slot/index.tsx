@@ -5,6 +5,7 @@ import { type SlotOpenVariant } from "./SlotOpen";
 import { SlotTaken } from "./SlotTaken";
 import { SlotOpen } from "./SlotOpen";
 import { SlotManagementDrawer } from "./SlotManagementDrawer";
+import { SlotBase } from "./SlotBase";
 
 // Re-export for convenience
 export { SlotBase } from "./SlotBase";
@@ -75,12 +76,20 @@ export const Slot = memo(
     if (listSecret) {
       return (
         <div>
-          {slotContent}
-          <SlotManagementDrawer slot={slot} listSecret={listSecret} />
+          <SlotBase>
+            <div className="h-12 flex items-center gap-3 p-1">
+              {slotContent}
+            </div>
+            <SlotManagementDrawer slot={slot} listSecret={listSecret} />
+          </SlotBase>
         </div>
       );
     }
 
-    return slotContent;
+    return (
+      <SlotBase>
+        <div className="h-12 flex items-center gap-3 p-1">{slotContent}</div>
+      </SlotBase>
+    );
   },
 );
