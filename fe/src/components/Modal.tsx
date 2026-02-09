@@ -39,7 +39,7 @@ export function Modal({ isOpen, onClose, children }: ModalProps) {
     >
       <div
         ref={modalRef}
-        className="relative flex h-full w-full max-h-[100dvh] max-w-none flex-col overflow-y-auto bg-white p-4 text-left shadow-lg sm:h-auto sm:max-w-md sm:rounded-md"
+        className="relative flex h-full w-full max-h-[100dvh] max-w-none flex-col overflow-y-auto bg-white p-4 text-left shadow-lg sm:h-auto sm:max-w-md sm:rounded-xl"
         style={{
           paddingTop: "max(env(safe-area-inset-top), 1rem)",
           paddingRight: "max(env(safe-area-inset-right), 1rem)",

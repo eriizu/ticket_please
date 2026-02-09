@@ -3,6 +3,7 @@ import type * as models from "../../models";
 import { useDeleteSlot } from "@/hooks/useDeleteSlot";
 import { useAdminUpdateToken } from "@/hooks/useAdminToken";
 import { Modal } from "../Modal";
+import { SlotConfirmModal, type SlotConfirmAction } from "./SlotConfirmModal";
 
 type SlotData = typeof models.SlotBase.infer;
 
@@ -114,6 +115,9 @@ export const SlotManagementDrawer = memo(function SlotManagementDrawer({
   listSecret,
 }: SlotManagementDrawerProps) {
   const [isTimeModalOpen, setIsTimeModalOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<SlotConfirmAction | null>(
+    null,
+  );
   const deleteSlot = useDeleteSlot();
   const updateToken = useAdminUpdateToken();
 
@@ -185,7 +189,7 @@ export const SlotManagementDrawer = memo(function SlotManagementDrawer({
                 type="button"
                 onClick={handleClearRealTurnTime}
                 disabled={isLoading}
-                className="btn-neutral text-xs py-0.5 px-2 "
+                className="btn-neutral text-xs py-0.5 px-2 flex-1"
               >
                 Clear
               </button>
@@ -193,7 +197,7 @@ export const SlotManagementDrawer = memo(function SlotManagementDrawer({
                 type="button"
                 onClick={() => setIsTimeModalOpen(true)}
                 disabled={isLoading}
-                className="btn-neutral text-xs py-0.5 px-2 "
+                className="btn-neutral text-xs py-0.5 px-2 flex-1"
               >
                 Change
               </button>
@@ -204,7 +208,7 @@ export const SlotManagementDrawer = memo(function SlotManagementDrawer({
                 type="button"
                 onClick={handleMarkTurnedNow}
                 disabled={isLoading}
-                className="btn-neutral text-xs py-0.5 px-2 "
+                className="btn-neutral text-xs py-0.5 px-2 flex-1"
               >
                 Now
               </button>
@@ -212,7 +216,7 @@ export const SlotManagementDrawer = memo(function SlotManagementDrawer({
                 type="button"
                 onClick={handleMarkOnTime}
                 disabled={isLoading}
-                className="btn-neutral text-xs py-0.5 px-2 "
+                className="btn-neutral text-xs py-0.5 px-2 flex-1"
               >
                 On time
               </button>
@@ -220,9 +224,9 @@ export const SlotManagementDrawer = memo(function SlotManagementDrawer({
           )}
           <button
             type="button"
-            onClick={handleUnregister}
+            onClick={() => setConfirmAction("unregister")}
             disabled={isLoading}
-            className="btn-neutral text-xs py-0.5 px-2 text-red-700"
+            className="btn-neutral text-xs py-0.5 px-2 text-red-700 flex-1"
           >
             Unregister
           </button>
@@ -237,14 +241,22 @@ export const SlotManagementDrawer = memo(function SlotManagementDrawer({
       ) : (
         <button
           type="button"
-          onClick={handleDeleteSlot}
+          onClick={() => setConfirmAction("delete")}
           disabled={isLoading}
-          className="btn-dangerous text-xs"
-          //className="btn-neutral text-xs py-0.5 px-2 flex-1 text-red-700"
+          className="btn-neutral text-red-700 text-xs flex-1"
         >
           Delete
         </button>
       )}
+      <SlotConfirmModal
+        action={confirmAction}
+        slot={slot}
+        isLoading={isLoading}
+        onConfirm={
+          confirmAction === "unregister" ? handleUnregister : handleDeleteSlot
+        }
+        onClose={() => setConfirmAction(null)}
+      />
     </div>
   );
 });

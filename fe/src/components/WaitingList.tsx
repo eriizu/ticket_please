@@ -138,7 +138,7 @@ const QueueSection = memo(
           ) : (
             <button
               type="button"
-              className="before:content-['→'] before:mr-1 btn-secondary"
+              className="before:content-['→'] before:mr-1 btn-secondary w-full md:w-fit"
               onClick={() => setRegisteringFor({ list_id: listId, invite })}
             >
               take a ticket
@@ -182,30 +182,30 @@ const AdminActions = memo(({ list, managmentSecret }: AdminActionsProps) => {
   const { mutate: deleteList } = useDeleteList();
   return (
     <>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-col md:flex-row flex-wrap gap-2">
         <button
           type="button"
-          className="btn-secondary w-fit"
+          className="btn-secondary md:w-fit"
           onClick={() => setIsModalSlotOpen(true)}
         >
           Generate slots
         </button>
         <button
           type="button"
-          className="btn-secondary w-fit"
+          className="btn-secondary md:w-fit"
           onClick={() => deleteList(managmentSecret)}
         >
           Delete list
         </button>
         <Invite managmentSecret={managmentSecret} />
-        <button
+        {/*<button
           type="button"
           className="btn-secondary w-fit"
           onClick={() => setShowRegistrations(!showRegistrations)}
         >
           {showRegistrations ? "Hide" : "Show"} registrations (
           {list.tokens.length})
-        </button>
+        </button>*/}
       </div>
       {showRegistrations && (
         <RegistrationsTable tokens={list.tokens} listSecret={managmentSecret} />
@@ -260,7 +260,7 @@ const Invite = ({ managmentSecret }: { managmentSecret: string }) => {
     return (
       <button
         type="button"
-        className="btn-secondary w-50"
+        className="btn-secondary md:w-50"
         onClick={copyToClipboard}
         title="Copy invite link"
       >
