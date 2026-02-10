@@ -13,6 +13,16 @@ interface ModalProps {
 
 export function Modal({ isOpen, onClose, children }: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLElement | null>(null);
+  const wasOpen = useRef(false);
+
+  // Capture trigger element during render, before autoFocus moves it
+  if (isOpen && !wasOpen.current) {
+    if (document.activeElement instanceof HTMLElement) {
+      triggerRef.current = document.activeElement;
+    }
+  }
+  wasOpen.current = isOpen;
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -30,6 +40,13 @@ export function Modal({ isOpen, onClose, children }: ModalProps) {
     };
   }, [isOpen, onClose]);
 
+  useEffect(() => {
+    if (!isOpen && triggerRef.current) {
+      triggerRef.current.focus();
+      triggerRef.current = null;
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   return createPortal(
@@ -39,7 +56,7 @@ export function Modal({ isOpen, onClose, children }: ModalProps) {
     >
       <div
         ref={modalRef}
-        className="relative flex h-full w-full max-h-[100dvh] max-w-none flex-col overflow-y-auto bg-white p-4 text-left shadow-lg sm:h-auto sm:max-w-md sm:rounded-xl"
+        className="relative flex h-full w-full max-h-dvh max-w-none flex-col overflow-y-auto bg-white p-4 text-left shadow-lg sm:h-auto sm:max-w-md sm:rounded-xl"
         style={{
           paddingTop: "max(env(safe-area-inset-top), 1rem)",
           paddingRight: "max(env(safe-area-inset-right), 1rem)",

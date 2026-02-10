@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useEffect, useRef } from "react";
 import type * as models from "../../models";
 import { absoluteTimeFormatter } from "@/utils/formatters";
 import { Modal } from "../Modal";
@@ -22,6 +22,14 @@ export const SlotConfirmModal = memo(function SlotConfirmModal({
   onConfirm,
   onClose,
 }: SlotConfirmModalProps) {
+  const confirmRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (action !== null) {
+      confirmRef.current?.focus();
+    }
+  }, [action]);
+
   return (
     <Modal isOpen={action !== null} onClose={onClose}>
       <h2 className="mx-2 mb-2 text-xl font-semibold">
@@ -41,14 +49,13 @@ export const SlotConfirmModal = memo(function SlotConfirmModal({
         {action === "unregister" && slot.registered_client_name && (
           <p>
             Registered to{" "}
-            <span className="font-semibold">
-              {slot.registered_client_name}
-            </span>
+            <span className="font-semibold">{slot.registered_client_name}</span>
           </p>
         )}
       </div>
       <div className="flex gap-1 mx-1">
         <button
+          ref={confirmRef}
           type="button"
           onClick={() => {
             onClose();
