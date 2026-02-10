@@ -1,7 +1,7 @@
 // hooks/usePruneTokens.ts
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocalStorage } from "@/hooks/localStorage";
-import * as models from "../models";
+import * as models from "../../models";
 
 export function usePruneTokens(
   storage: models.PersistentStorage,

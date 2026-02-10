@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import * as models from "../models";
+import * as models from "@/models";
 import { useLocalStorage } from "@/hooks/localStorage";
 import { type } from "arktype";
 
@@ -37,4 +37,4 @@ export function useGenerateSlots() {
       console.error(`registration failed for ${variables}`, e);
     },
   });
-};
+}

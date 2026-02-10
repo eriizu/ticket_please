@@ -1,5 +1,5 @@
 import { useQueries } from "@tanstack/react-query";
-import type * as models from "../models";
+import type * as models from "../../models";
 
 export function useTokenValidation(tokens: (typeof models.KnownToken.infer)[]) {
   const results = useQueries({

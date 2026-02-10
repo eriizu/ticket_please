@@ -3,7 +3,7 @@ import { absoluteTimeFormatter } from "@/utils/formatters";
 import type * as models from "../../models";
 import { SlotBase } from "./SlotBase";
 import { UnregisterModal } from "./UnregisterModal";
-import { useUnregisterToken } from "@/hooks/useUnregisterToken";
+import { useUnregisterToken } from "@/hooks/token/unregister";
 
 type SlotData = typeof models.SlotBase.infer;
 

@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type } from "arktype";
-import * as models from "../models";
+import * as models from "@/models";
 
 export type WaitingListField = "opens_at" | "closes_at";
 

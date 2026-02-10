@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { type } from "arktype";
-import * as models from "../models";
+import * as models from "../../models";
 
 type TokenData = typeof models.WaitingTokenWithSecret.infer;
 

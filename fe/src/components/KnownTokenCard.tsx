@@ -1,6 +1,6 @@
 import { memo, useState } from "react";
-import { useKnownToken } from "@/hooks/useKnownToken";
-import { useUnregisterToken } from "@/hooks/useUnregisterToken";
+import { useKnownToken } from "@/hooks/token/get_known";
+import { useUnregisterToken } from "@/hooks/token/unregister";
 import { UnregisterModal } from "./Slot/UnregisterModal";
 import { formatRelativeDateTime } from "@/utils/formatters";
 

@@ -3,10 +3,10 @@ import { GenSlotModal } from "@/components/GenSlotModal";
 import { RegistrationsTable } from "@/components/RegistrationsTable";
 import { getSlotVariant, Slot } from "@/components/Slot";
 import type { Registration } from "@/contexts/RegistrationContext";
-import { useDeleteList } from "@/hooks/useDeleteList";
+import { useDeleteList } from "@/hooks/list/useDeleteList";
 import { usePersistent } from "@/hooks/usePersistent";
-import { useUnregisterToken } from "@/hooks/useUnregisterToken";
-import { useWaitingListInvite } from "@/hooks/useWaitingLists";
+import { useUnregisterToken } from "@/hooks/token/unregister";
+import { useWaitingListInvite } from "@/hooks/list/useWaitingLists";
 import {
   absoluteDateFormatter,
   absoluteDateTimeFormatter,

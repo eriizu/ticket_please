@@ -1,6 +1,6 @@
 import { type FormEvent, useEffect, useId, useRef, useState } from "react";
 import { Modal } from "../components/Modal";
-import { useGenerateSlots } from "@/hooks/useGenerateSlots";
+import { useGenerateSlots } from "@/hooks/slot/useGenerateSlots";
 
 interface GenSlotModalProps {
   isOpen: boolean;

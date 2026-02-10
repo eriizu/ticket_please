@@ -1,5 +1,8 @@
 import { memo, useMemo } from "react";
-import { useAdminDeleteToken, useAdminUpdateToken } from "@/hooks/useAdminToken";
+import {
+  useAdminDeleteToken,
+  useAdminUpdateToken,
+} from "@/hooks/token/upadate_as_admin";
 import { absoluteTimeFormatter } from "@/utils/formatters";
 import type * as models from "../models";
 
@@ -16,7 +19,7 @@ export const RegistrationsTable = memo(function RegistrationsTable({
 }: RegistrationsTableProps) {
   const sortedTokens = useMemo(
     () => [...tokens].sort((a, b) => a.id - b.id),
-    [tokens]
+    [tokens],
   );
 
   if (sortedTokens.length === 0) {
@@ -85,9 +88,7 @@ const TokenRow = memo(function TokenRow({ token, listSecret }: TokenRowProps) {
     <div className="flex items-center gap-3 px-2 py-1.5 border rounded-md border-neutral-200 hover:bg-neutral-50">
       <div className="w-16 text-neutral-600 text-sm">#{token.id}</div>
       <div className="flex-1 min-w-0 text-neutral-800 truncate">
-        {token.client_name || (
-          <span className="text-neutral-400">No name</span>
-        )}
+        {token.client_name || <span className="text-neutral-400">No name</span>}
       </div>
       <div className="w-16 text-sm">
         {token.slot_id != null ? (

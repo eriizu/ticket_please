@@ -1,6 +1,6 @@
-import { usePruneTokens } from "@/hooks/usePruneTokens";
+import { usePruneTokens } from "@/hooks/token/prune_tokens";
 import { usePersistent } from "@/hooks/usePersistent";
-import { useTokenValidation } from "@/hooks/useTokenValidation";
+import { useTokenValidation } from "@/hooks/token/validation";
 
 export function TokenSumary() {
   return (

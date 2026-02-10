@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type } from "arktype";
 import { fetchWithETag, type WithETag } from "@/utils/fetchWithETag";
-import * as models from "../models";
+import * as models from "@/models";
 
 type WaitingListData = typeof models.WaitingListRelated.infer;
 

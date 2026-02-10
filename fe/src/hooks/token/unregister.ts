@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { getPersistentFromLocalStorage, usePersistent } from "./usePersistent";
+import { getPersistentFromLocalStorage, usePersistent } from "../usePersistent";
 
 export function useUnregisterToken() {
   const [_, setPersistent] = usePersistent();

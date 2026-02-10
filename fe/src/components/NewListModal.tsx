@@ -1,6 +1,6 @@
 import { type FormEvent, useId, useState, useEffect, useRef } from "react";
 import { Modal } from "../components/Modal";
-import { useCreateList } from "@/hooks/useCreateList";
+import { useCreateList } from "@/hooks/list/useCreateList";
 import { usePersistent } from "@/hooks/usePersistent";
 
 interface NewListModalProps {

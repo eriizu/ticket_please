@@ -1,7 +1,7 @@
 import { memo, useEffect, useId, useRef, useState } from "react";
 import type * as models from "../../models";
-import { useDeleteSlot } from "@/hooks/useDeleteSlot";
-import { useAdminUpdateToken } from "@/hooks/useAdminToken";
+import { useDeleteSlot } from "@/hooks/slot/useDeleteSlot";
+import { useAdminUpdateToken } from "@/hooks/token/upadate_as_admin";
 import { Modal } from "../Modal";
 import { SlotConfirmModal, type SlotConfirmAction } from "./SlotConfirmModal";
 

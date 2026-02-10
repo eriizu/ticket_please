@@ -7,7 +7,7 @@ import { useRegisterOnList } from "@/hooks/useRegisterOnList";
 import { Modal } from "../components/Modal";
 import * as models from "../models";
 import { Slot, SlotBase } from "./Slot";
-import { useListSlot } from "@/hooks/useListSlot";
+import { useListSlot } from "@/hooks/slot/useListSlot";
 
 export type { Registration };
 
@@ -38,10 +38,7 @@ export function RegisterModal(props: {
     isPending,
     status,
     mutate: registerOnList,
-  } = useRegisterOnList(props.registeringFor,
-    storage,
-    setStorage,
-  );
+  } = useRegisterOnList(props.registeringFor, storage, setStorage);
   useEffect(() => {
     if (status === "success") {
       props.onClose();
