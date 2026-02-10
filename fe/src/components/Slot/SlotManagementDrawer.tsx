@@ -180,45 +180,45 @@ export const SlotManagementDrawer = memo(function SlotManagementDrawer({
   };
 
   return (
-    <div className="flex gap-1 mt-1 h-8">
+    <div className="flex border-t border-neutral-700 divide-x divide-neutral-400 mt-1 h-8">
       {isTaken ? (
         <>
           {hasRealTurnTime ? (
             <>
               <button
                 type="button"
-                onClick={handleClearRealTurnTime}
+                onClick={() => setIsTimeModalOpen(true)}
                 disabled={isLoading}
-                className="btn-neutral text-xs py-0.5 px-2 flex-1"
+                className="btn-flat-neutral text-xs py-0.5 px-2 flex-1"
               >
-                Clear
+                Change
               </button>
               <button
                 type="button"
-                onClick={() => setIsTimeModalOpen(true)}
+                onClick={handleClearRealTurnTime}
                 disabled={isLoading}
-                className="btn-neutral text-xs py-0.5 px-2 flex-1"
+                className="btn-flat-neutral text-xs py-0.5 px-2 flex-1 text-amber-700"
               >
-                Change
+                Clear
               </button>
             </>
           ) : (
             <>
               <button
                 type="button"
-                onClick={handleMarkTurnedNow}
+                onClick={handleMarkOnTime}
                 disabled={isLoading}
-                className="btn-neutral text-xs py-0.5 px-2 flex-1"
+                className="btn-flat-neutral text-xs py-0.5 px-2 flex-1 text-green-700"
               >
-                Now
+                On time
               </button>
               <button
                 type="button"
-                onClick={handleMarkOnTime}
+                onClick={handleMarkTurnedNow}
                 disabled={isLoading}
-                className="btn-neutral text-xs py-0.5 px-2 flex-1"
+                className="btn-flat-neutral text-xs py-0.5 px-2 flex-1 text-amber-700"
               >
-                On time
+                Now
               </button>
             </>
           )}
@@ -226,7 +226,7 @@ export const SlotManagementDrawer = memo(function SlotManagementDrawer({
             type="button"
             onClick={() => setConfirmAction("unregister")}
             disabled={isLoading}
-            className="btn-neutral text-xs py-0.5 px-2 text-red-700 flex-1"
+            className="btn-flat-neutral text-xs py-0.5 px-2 text-red-700 flex-1"
           >
             Unregister
           </button>
@@ -243,7 +243,7 @@ export const SlotManagementDrawer = memo(function SlotManagementDrawer({
           type="button"
           onClick={() => setConfirmAction("delete")}
           disabled={isLoading}
-          className="btn-neutral text-red-700 text-xs flex-1"
+          className="btn-flat-neutral text-red-700 text-xs flex-1"
         >
           Delete
         </button>

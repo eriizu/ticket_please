@@ -73,23 +73,15 @@ export const Slot = memo(
       }
     })();
 
-    if (listSecret) {
-      return (
-        <div>
-          <SlotBase>
-            <div className="h-12 flex items-center gap-3 p-1">
-              {slotContent}
-            </div>
-            <SlotManagementDrawer slot={slot} listSecret={listSecret} />
-          </SlotBase>
-        </div>
-      );
-    }
-
     return (
-      <SlotBase>
-        <div className="h-12 flex items-center gap-3 p-1">{slotContent}</div>
-      </SlotBase>
+      <div>
+        <SlotBase>
+          <div className="h-12 flex items-center gap-3 p-1">{slotContent}</div>
+          {listSecret && (
+            <SlotManagementDrawer slot={slot} listSecret={listSecret} />
+          )}
+        </SlotBase>
+      </div>
     );
   },
 );

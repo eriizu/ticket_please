@@ -46,4 +46,27 @@ code {
   .btn-neutral {
     @apply disabled:text-neutral-700;
   }
+
+  .btn-flat-primary,
+  .btn-flat-dangerous,
+  .btn-flat-secondary,
+  .btn-flat-neutral {
+    @apply border-0 outline-pink-500 focus:outline-2 px-2 py-1;
+  }
+
+  .btn-flat-primary {
+    @apply bg-neutral-900 hover:bg-neutral-700 text-neutral-200 disabled:text-neutral-200 disabled:bg-neutral-600;
+  }
+
+  .btn-flat-secondary {
+    @apply bg-neutral-50 hover:bg-neutral-200 disabled:text-neutral-700;
+  }
+
+  .btn-flat-dangerous {
+    @apply bg-red-400 hover:bg-red-600 text-neutral-800 font-bold disabled:bg-red-200;
+  }
+
+  .btn-flat-neutral {
+    @apply disabled:text-neutral-700 hover:bg-neutral-100;
+  }
 }
