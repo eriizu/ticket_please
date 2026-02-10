@@ -14,6 +14,7 @@ import {
 } from "@/utils/formatters";
 import { groupSlotsByLocalStartDateSorted } from "@/utils/slots";
 import type * as models from "../models";
+import { EditListModal } from "./EditListModal";
 import { RegisterModal } from "./RegisterModal";
 
 type WaitingList = typeof models.WaitingListRelated.infer;
@@ -178,11 +179,19 @@ interface AdminActionsProps {
 
 const AdminActions = memo(({ list, managmentSecret }: AdminActionsProps) => {
   const [isModalSlotOpen, setIsModalSlotOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [showRegistrations, setShowRegistrations] = useState(false);
   const { mutate: deleteList } = useDeleteList();
   return (
     <>
       <div className="flex flex-col md:flex-row flex-wrap gap-2">
+        <button
+          type="button"
+          className="btn-secondary md:w-fit"
+          onClick={() => setIsEditModalOpen(true)}
+        >
+          Edit list
+        </button>
         <button
           type="button"
           className="btn-secondary md:w-fit"
@@ -198,6 +207,7 @@ const AdminActions = memo(({ list, managmentSecret }: AdminActionsProps) => {
           Delete list
         </button>
         <Invite managmentSecret={managmentSecret} />
+        <ShareManagement managmentSecret={managmentSecret} />
         {/*<button
           type="button"
           className="btn-secondary w-fit"
@@ -217,14 +227,73 @@ const AdminActions = memo(({ list, managmentSecret }: AdminActionsProps) => {
         listName={list.name}
         listSecret={managmentSecret}
       />
+      <EditListModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        listSecret={managmentSecret}
+        currentName={list.name}
+        currentOpensAt={list.opens_at}
+        currentClosesAt={list.closes_at}
+      />
     </>
   );
 });
 
+// -----------------------------------------------------------------------------
+// CopyLinkButton - Shared button that copies a link to clipboard
+// -----------------------------------------------------------------------------
+
+function copyToClipboard(text: string) {
+  if (navigator.clipboard?.writeText) {
+    void navigator.clipboard.writeText(text);
+  } else {
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand("copy");
+    document.body.removeChild(textarea);
+  }
+}
+
+function truncateCode(code: string) {
+  return code.length > 10 ? `${code.slice(0, 6)}...${code.slice(-4)}` : code;
+}
+
+const CopyLinkButton = ({
+  label,
+  link,
+  displayCode,
+}: {
+  label: string;
+  link: string;
+  displayCode: string;
+}) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleClick = () => {
+    copyToClipboard(link);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1000);
+  };
+
+  return (
+    <button
+      type="button"
+      className="btn-secondary md:w-50"
+      onClick={handleClick}
+      title={`Copy ${label} link`}
+    >
+      {label}: {copied ? "copied" : displayCode}
+    </button>
+  );
+};
+
 const Invite = ({ managmentSecret }: { managmentSecret: string }) => {
   const { data: invite, isLoading: inviteIsLoading } =
     useWaitingListInvite(managmentSecret);
-  const [copied, setCopied] = useState(false);
   if (inviteIsLoading) {
     return <>Loading invite</>;
   }
@@ -233,42 +302,27 @@ const Invite = ({ managmentSecret }: { managmentSecret: string }) => {
     if (!inviteCode) {
       return <>No invite link</>;
     }
-    const invitePath = `/lists/${inviteCode}`;
-    const inviteLink = `${window.location.origin}${invitePath}`;
-    const displayCode =
-      inviteCode.length > 10
-        ? `${inviteCode.slice(0, 6)}...${inviteCode.slice(-4)}`
-        : inviteCode;
-
-    const copyToClipboard = () => {
-      if (navigator.clipboard?.writeText) {
-        void navigator.clipboard.writeText(inviteLink);
-      } else {
-        const textarea = document.createElement("textarea");
-        textarea.value = inviteLink;
-        textarea.style.position = "fixed";
-        textarea.style.opacity = "0";
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand("copy");
-        document.body.removeChild(textarea);
-      }
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1000);
-    };
-
+    const inviteLink = `${window.location.origin}/lists/${inviteCode}`;
     return (
-      <button
-        type="button"
-        className="btn-secondary md:w-50"
-        onClick={copyToClipboard}
-        title="Copy invite link"
-      >
-        invite: {copied ? "copied" : displayCode}
-      </button>
+      <CopyLinkButton
+        label="invite"
+        link={inviteLink}
+        displayCode={truncateCode(inviteCode)}
+      />
     );
   }
   return <>No invite link</>;
+};
+
+const ShareManagement = ({ managmentSecret }: { managmentSecret: string }) => {
+  const shareLink = `${window.location.origin}/me?reg_list=${managmentSecret}`;
+  return (
+    <CopyLinkButton
+      label="share"
+      link={shareLink}
+      displayCode={truncateCode(managmentSecret)}
+    />
+  );
 };
 
 // -----------------------------------------------------------------------------

@@ -92,14 +92,17 @@ pub struct PatchWaitingListDto {
     pub name: Option<String>,
     pub opens_at: Option<DateTime<FixedOffset>>,
     pub closes_at: Option<DateTime<FixedOffset>>,
+    #[serde(default)]
+    pub clear_fields: Vec<crate::db::WaitingListField>,
 }
 
-impl std::convert::From<PatchWaitingListDto> for crate::db::PartialWaitingList {
+impl std::convert::From<PatchWaitingListDto> for crate::db::EditWaitingList {
     fn from(val: PatchWaitingListDto) -> Self {
-        crate::db::PartialWaitingList {
+        crate::db::EditWaitingList {
             wlist_name: val.name,
             wlist_opens_at: val.opens_at,
             wlist_closes_at: val.closes_at,
+            clear_fields: val.clear_fields,
         }
     }
 }

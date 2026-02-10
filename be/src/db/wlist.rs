@@ -33,11 +33,20 @@ impl WaitingList {
     }
 }
 
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum WaitingListField {
+    OpensAt,
+    ClosesAt,
+}
+
 #[derive(serde::Serialize, serde::Deserialize, Debug, sqlx::FromRow)]
-pub struct PartialWaitingList {
+pub struct EditWaitingList {
     pub wlist_name: Option<String>,
     pub wlist_opens_at: Option<DateTime<FixedOffset>>,
     pub wlist_closes_at: Option<DateTime<FixedOffset>>,
+    #[serde(default)]
+    pub clear_fields: Vec<WaitingListField>,
 }
 
 const SELECT_LIST: &'static str = r#"SELECT
@@ -170,7 +179,7 @@ RETURNING wlist_id, wlist_name, wlist_secret, wlist_invite_code, wlist_opens_at,
     pub async fn edit_waiting_list(
         &self,
         admin_token: &str,
-        updates: PartialWaitingList,
+        updates: EditWaitingList,
     ) -> Result<WaitingList, RepoError> {
         let rq_head = "UPDATE waiting_list SET";
         let rq_tail = r#"RETURNING
@@ -186,6 +195,12 @@ RETURNING wlist_id, wlist_name, wlist_secret, wlist_invite_code, wlist_opens_at,
         generator.add_if_some("wlist_opens_at", updates.wlist_opens_at)?;
         generator.add_if_some("wlist_closes_at", updates.wlist_closes_at)?;
         generator.add_where("wlist_secret", admin_token)?;
+        for field in updates.clear_fields {
+            generator.add_null_assignment(match field {
+                WaitingListField::ClosesAt => "wlist_closes_at",
+                WaitingListField::OpensAt => "wlist_opens_at",
+            });
+        }
         if !generator.has_assignments() {
             return Err(RepoError::EmptyUpdates {
                 context: "edit_waiting_list",
