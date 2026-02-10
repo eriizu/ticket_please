@@ -270,6 +270,46 @@ WHERE id = $2 AND deleted_at IS NULL
             .trim()
         );
     }
+
+    #[test]
+    fn generate_rq_str_with_null_assignment() {
+        let mut generator = super::EditRequestAndArgsBuilder::new();
+        generator.add_assignment("name", "alice").unwrap();
+        generator.add_null_assignment("deleted_at");
+        generator.add_where("id", 1).unwrap();
+        let rq = generator.build_rq_str();
+        assert_eq!(
+            rq.trim(),
+            r#"name = $1,
+deleted_at = NULL
+WHERE id = $2
+"#
+            .trim()
+        );
+    }
+
+    #[test]
+    fn null_assignment_counts_as_assignment() {
+        let mut generator = super::EditRequestAndArgsBuilder::new();
+        assert!(!generator.has_assignments());
+        generator.add_null_assignment("deleted_at");
+        assert!(generator.has_assignments());
+    }
+
+    #[test]
+    fn generate_rq_str_where_is_null_only() {
+        let mut generator = super::EditRequestAndArgsBuilder::new();
+        generator.add_assignment("status", "active").unwrap();
+        generator.add_where_is_null("deleted_at");
+        let rq = generator.build_rq_str();
+        assert_eq!(
+            rq.trim(),
+            r#"status = $1
+WHERE deleted_at IS NULL
+"#
+            .trim()
+        );
+    }
 }
 
 // struct EditQueryBuilder<'q, O> {
