@@ -11,7 +11,7 @@ import {
 } from "@/components/WaitingList";
 import type { Registration } from "@/contexts/RegistrationContext";
 import { usePersistent } from "@/hooks/usePersistent";
-import { useWaitingLists } from "@/hooks/list/useWaitingLists";
+import { useWaitingLists } from "@/hooks/list/get";
 
 export const Route = createFileRoute("/")({
   component: App,

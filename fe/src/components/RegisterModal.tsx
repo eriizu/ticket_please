@@ -7,7 +7,7 @@ import { useRegisterOnList } from "@/hooks/useRegisterOnList";
 import { Modal } from "../components/Modal";
 import * as models from "../models";
 import { Slot, SlotBase } from "./Slot";
-import { useListSlot } from "@/hooks/slot/useListSlot";
+import { useListSlot } from "@/hooks/slot/get";
 
 export type { Registration };
 

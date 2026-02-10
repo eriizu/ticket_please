@@ -1,7 +1,6 @@
 import { memo } from "react";
 import { absoluteTimeFormatter } from "@/utils/formatters";
 import type * as models from "../../models";
-import { SlotBase } from "./SlotBase";
 
 type SlotData = typeof models.SlotBase.infer;
 

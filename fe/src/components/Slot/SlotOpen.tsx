@@ -2,7 +2,6 @@ import { memo, useState } from "react";
 import type { Registration } from "@/contexts/RegistrationContext";
 import { absoluteTimeFormatter } from "@/utils/formatters";
 import type * as models from "../../models";
-import { SlotBase } from "./SlotBase";
 import { RegisterModal } from "../RegisterModal";
 
 type SlotData = typeof models.SlotBase.infer;

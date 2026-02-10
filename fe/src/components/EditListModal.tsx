@@ -1,6 +1,6 @@
 import { type FormEvent, useId, useState, useEffect, useRef } from "react";
 import { Modal } from "../components/Modal";
-import { useEditList, type WaitingListField } from "@/hooks/list/useEditList";
+import { useEditList, type WaitingListField } from "@/hooks/list/edit";
 
 interface EditListModalProps {
   isOpen: boolean;

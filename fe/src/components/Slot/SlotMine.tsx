@@ -1,7 +1,6 @@
 import { memo, useEffect, useState } from "react";
 import { absoluteTimeFormatter } from "@/utils/formatters";
 import type * as models from "../../models";
-import { SlotBase } from "./SlotBase";
 import { UnregisterModal } from "./UnregisterModal";
 import { useUnregisterToken } from "@/hooks/token/unregister";
 

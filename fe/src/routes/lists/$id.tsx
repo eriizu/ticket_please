@@ -1,6 +1,6 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { SingleWaitingList } from "@/components/WaitingList";
-import { useWaitingList } from "@/hooks/list/useWaitingLists";
+import { useWaitingList } from "@/hooks/list/get";
 
 interface ListSearchParams {
   invite_code?: string;
